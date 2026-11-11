@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дневник на храненето</title>
+<meta name="theme-color" content="#1d5bd8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: one narrow column on white — tabs (Дневник / Рецепти / Правила), the day's balance, then meals in eating order; sheets slide up from the bottom. Blue = main action, black = secondary. */
+  --bg:#ffffff;
+  --surface:#ffffff;
+  --surface-2:#f4f6f9;
+  --ink:#0e1013;
+  --muted:#5e6672;
+  --line:#e2e5ea;
+  --blue:#1d5bd8;
+  --blue-ink:#ffffff;
+  --blue-soft:#eaf0fd;
+  --black:#0e1013;
+  --black-ink:#ffffff;
+  --prot:#1d5bd8;
+  --carb:#d39a10;
+  --fat:#7a4cc0;
+  --salt:#6b7380;
+  --warn:#c25a12;
+  --bad:#c42b1f;
+  --font-d:"Unbounded","Golos Text",system-ui,sans-serif;
+  --font-b:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:14px;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg)}
+body{color:var(--ink);font-family:var(--font-b);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.app{max-width:720px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:14px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-family:var(--font-d);font-weight:600;font-size:1.12rem;letter-spacing:-.01em}
+.top{display:flex;flex-direction:column;gap:10px}
+.title-row,.date-row{display:flex;align-items:center;gap:8px}
+.title-row{justify-content:space-between}
+.date-row #dateLabel{font-weight:600;min-width:9.5em;text-align:center;text-transform:capitalize;flex:1}
+.icon-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--black);background:var(--surface);font-size:1.3rem;line-height:1}
+.ghost{background:var(--surface);border:1px solid var(--black);border-radius:10px;padding:7px 12px;font-weight:500}
+.ghost.small{padding:6px 10px;font-size:.9rem}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:none;padding:10px 4px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--blue)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--black);border-radius:12px;padding:3px;gap:3px}
+.seg button{border:0;background:transparent;border-radius:9px;padding:8px 4px;font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--black);color:var(--black-ink)}
+.tip{font-size:.88rem;color:var(--muted);margin:0}
+.tip[hidden]{display:none}
+.banner{background:var(--blue-soft);border-radius:var(--r);padding:10px 14px;font-size:.92rem;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.banner button{border:0;background:var(--blue);color:var(--blue-ink);border-radius:9px;padding:6px 12px;font-weight:600}
+.view[hidden]{display:none}
+.view{display:flex;flex-direction:column;gap:14px}
+
+.summary{border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
+.sum-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.big{font-family:var(--font-d);font-weight:600;font-size:2.3rem;line-height:1;font-variant-numeric:tabular-nums;color:var(--blue)}
+.big.over{color:var(--warn)}
+.big-cap{color:var(--muted);font-size:.9rem;margin-top:4px}
+.sum-side{text-align:right;color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
+.sum-side b{color:var(--ink)}
+.bar{height:10px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--blue);border-radius:99px;transition:width .25s}
+.bar.over>span{background:var(--warn)}
+.macros{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 16px}
+.macro .mrow{display:flex;justify-content:space-between;font-size:.86rem;gap:6px}
+.macro .mrow span:last-child{font-variant-numeric:tabular-nums;color:var(--muted)}
+.macro .bar{height:7px;margin-top:4px}
+.macro.prot .bar>span{background:var(--prot)}
+.macro.carb .bar>span{background:var(--carb)}
+.macro.fat .bar>span{background:var(--fat)}
+.macro.salt .bar>span{background:var(--salt)}
+.macro.warn .bar>span{background:var(--warn)}
+.macro.bad .bar>span{background:var(--bad)}
+.macro.bad .mrow span:last-child{color:var(--bad);font-weight:600}
+.remain{font-size:.88rem;color:var(--muted);margin:0}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.actions button{border:1px solid var(--black);background:var(--black);color:var(--black-ink);border-radius:10px;padding:9px 13px;font-weight:500}
+.actions .primary{background:var(--blue);border-color:var(--blue);color:var(--blue-ink);font-weight:600}
+.actions .armed{background:var(--bad);border-color:var(--bad)}
+
+#slots{display:flex;flex-direction:column;gap:12px}
+.slot{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.slot>header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:12px 16px 8px}
+.slot h2{font-size:1.02rem;font-weight:600;display:inline}
+.slot .time{font-size:.82rem;color:var(--muted);margin-left:6px}
+.slot-k{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.slot.empty .slot-k{color:var(--muted);font-weight:500;font-size:.88rem;white-space:normal;text-align:right}
+.slot.orphan{border-style:dashed}
+.items{list-style:none;margin:0;padding:0 16px}
+.item{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item-main{display:flex;flex-direction:column;align-items:flex-start;min-width:0;flex:1 1 220px}
+.namebtn{background:none;border:0;padding:0;text-align:left;font-weight:500;color:var(--ink)}
+.namebtn.has-rec{text-decoration:underline;text-decoration-color:var(--blue);text-decoration-thickness:2px;text-underline-offset:3px}
+.warn-tag{color:var(--bad);font-weight:600;font-size:.82rem}
+.item-macros{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.item-macros .kc{color:var(--ink);font-weight:600}
+.grams{display:flex;align-items:center;gap:4px}
+.grams button{width:34px;height:34px;border-radius:9px;border:1px solid var(--black);background:var(--surface);font-size:1.1rem;line-height:1}
+.grams input{width:64px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--surface);text-align:center;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.grams input::-webkit-outer-spin-button,.grams input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.grams .unit{font-size:.85rem;color:var(--muted);margin-right:4px}
+.grams .x{color:var(--muted);border-color:transparent}
+.sugg{margin:0 12px;padding:10px 12px;background:var(--surface-2);border-radius:12px;display:flex;flex-direction:column;gap:8px}
+.sugg-head{display:flex;justify-content:space-between;align-items:center;font-size:.84rem;color:var(--muted)}
+.link{background:none;border:0;color:var(--blue);font-weight:600;padding:2px 4px}
+.sug{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px}
+.sug-text{display:flex;flex-direction:column;min-width:0;gap:2px}
+.sug-name{font-size:.95rem}
+.sug-name .g{color:var(--blue);font-weight:600;white-space:nowrap}
+.btn-add{border:0;background:var(--blue);color:var(--blue-ink);border-radius:9px;padding:8px 12px;font-weight:600;white-space:nowrap}
+.done{margin:0 16px;padding:10px 12px;border-radius:10px;background:var(--surface-2);font-size:.9rem;color:var(--muted)}
+.add{display:block;width:calc(100% - 24px);margin:10px 12px 12px;border:1.5px dashed var(--blue);background:transparent;border-radius:10px;padding:9px;color:var(--blue);font-weight:600}
+.foot{font-size:.82rem;color:var(--muted);margin:4px 0 0}
+
+.star{flex:0 0 auto;width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:1.05rem;line-height:1}
+.star.on{background:var(--blue);border-color:var(--blue);color:var(--blue-ink)}
+.namerow{display:flex;align-items:center;gap:6px}
+.search-wrap{display:flex;flex-direction:column;gap:6px}
+.lsearch{width:100%;height:46px;border:1.5px solid var(--black);border-radius:12px;background:var(--surface);padding:0 14px;font-size:1rem}
+.lresults{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.lresults[hidden]{display:none}
+.lresults li{display:flex;align-items:center;gap:6px;padding-right:8px}
+.lresults li+li{border-top:1px solid var(--line)}
+.lresults .padd{flex:1;min-width:0;text-align:left;background:none;border:0;padding:10px 12px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.slotbtns{display:flex;flex-direction:column;gap:8px}
+.slotbtns button{border:1px solid var(--black);background:var(--surface);border-radius:10px;padding:11px 14px;text-align:left;font-weight:600;display:flex;justify-content:space-between;gap:10px}
+.slotbtns button span{font-weight:400;color:var(--muted);font-size:.88rem}
+.favbtn{border:1px solid var(--blue);background:var(--surface);color:var(--blue);border-radius:10px;padding:8px 12px;font-weight:600;align-self:flex-start}
+.favbtn.on{background:var(--blue);color:var(--blue-ink)}
+.srow{display:flex;gap:8px;align-items:center}
+.srow input{flex:1;min-width:0}
+.mic{flex:0 0 auto;width:46px;height:46px;border-radius:12px;border:0;background:var(--blue);color:var(--blue-ink);display:grid;place-items:center}
+.mic svg{width:22px;height:22px}
+.mic.on{background:var(--bad);animation:pulse 1.2s infinite}
+.mic[hidden]{display:none}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(196,43,31,.45)}50%{box-shadow:0 0 0 8px rgba(196,43,31,0)}}
+@media (prefers-reduced-motion: reduce){ .mic.on{animation:none} }
+/* Рецепти */
+.rsearch{width:100%;height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:0 12px}
+.rgroup h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:6px 0 4px}
+.rlist{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.rlist li+li{border-top:1px solid var(--line)}
+.rlist button{width:100%;text-align:left;background:none;border:0;padding:11px 14px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.rmeta{display:block;font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.chev{color:var(--blue);font-weight:700}
+.recipe h4{font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:6px 0 2px}
+.recipe ul,.recipe ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:5px}
+.recipe ol li::marker{color:var(--blue);font-weight:700}
+.rbadges{display:flex;flex-wrap:wrap;gap:6px}
+.rbadge{background:var(--surface-2);border-radius:99px;padding:4px 10px;font-size:.85rem;font-variant-numeric:tabular-nums}
+.rnote{background:var(--blue-soft);border-radius:10px;padding:10px 12px;font-size:.93rem;margin:0}
+.rnut{font-size:.88rem;color:var(--muted);margin:0}
+
+/* Правила */
+.rules details{border:1px solid var(--line);border-radius:12px;padding:0}
+.rules summary{list-style:none;cursor:pointer;padding:13px 16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.rules summary::-webkit-details-marker{display:none}
+.rules summary::after{content:"+";color:var(--blue);font-size:1.3rem;font-weight:600;line-height:1}
+.rules details[open] summary::after{content:"−"}
+.rules .rbody{padding:0 16px 14px;display:flex;flex-direction:column;gap:8px}
+.rules p{margin:0}
+.rules ul,.rules ol{margin:0;padding-left:1.25em;display:flex;flex-direction:column;gap:6px}
+.swap{width:100%;border-collapse:collapse;font-size:.9rem}
+.swap th,.swap td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.swap th{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.rules{display:flex;flex-direction:column;gap:10px}
+
+/* Листове */
+.sheet-wrap{position:fixed;inset:0;background:rgba(8,10,14,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet-wrap[hidden]{display:none}
+.sheet{background:var(--surface);width:100%;max-width:720px;max-height:90%;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.sheet-head h3{font-size:1.02rem}
+.sheet-body{overflow:auto;padding:12px 16px 20px;display:flex;flex-direction:column;gap:10px}
+.sheet input[type=search],.field input,.field select{width:100%;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:0 12px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.chips button{flex:0 0 auto;border:1px solid var(--black);background:var(--surface);border-radius:99px;padding:5px 11px;font-size:.85rem;white-space:nowrap}
+.chips button[aria-pressed="true"]{background:var(--black);color:var(--black-ink)}
+.plist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.plist li{display:flex;align-items:center;gap:6px}
+.plist li+li{border-top:1px solid var(--line)}
+.plist .padd{flex:1;min-width:0;text-align:left;background:none;border:0;padding:10px 2px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.plist .prec{flex:0 0 auto;border:1px solid var(--black);background:var(--surface);border-radius:8px;padding:5px 9px;font-size:.82rem;font-weight:500}
+.pname{font-weight:500}
+.pmeta{display:block;font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.plus{flex:0 0 auto;width:30px;height:30px;border-radius:8px;background:var(--blue);color:var(--blue-ink);display:grid;place-items:center;font-weight:700}
+.empty-list{color:var(--muted);font-size:.9rem;padding:8px 0}
+#customBox{border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+#customBox summary{cursor:pointer;font-weight:600;color:var(--blue)}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
+.form-grid .wide{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted)}
+.field input,.field select{color:var(--ink)}
+.calc{background:var(--blue-soft);border-radius:12px;padding:10px 12px;font-size:.92rem}
+.calc b{font-family:var(--font-d);font-weight:600}
+.save{border:0;background:var(--blue);color:var(--blue-ink);border-radius:10px;padding:11px;font-weight:600}
+.sec-title{font-weight:600;font-size:.92rem;margin-top:6px}
+.scan-row{display:flex;gap:8px;flex-wrap:wrap}
+.scan-btn{display:inline-flex;align-items:center;gap:8px;border:0;color:var(--black-ink);background:var(--black);border-radius:10px;padding:9px 13px;font-weight:600;cursor:pointer;align-self:flex-start}
+.scan-btn.blue{background:var(--blue);color:var(--blue-ink)}
+.scan-btn svg{width:20px;height:20px}
+.scan-btn[hidden]{display:none}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;opacity:0}
+.bcpanel{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--surface-2)}
+.bcpanel[hidden],.bcnew[hidden]{display:none}
+.bcnew{display:flex;flex-direction:column;gap:8px}
+.bcpanel p{margin:0;font-size:.9rem}
+.bc-manual{display:flex;gap:8px}
+.bc-manual input{flex:1;min-width:0;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:0 12px;font-variant-numeric:tabular-nums}
+.bc-manual button{border:0;background:var(--black);color:var(--black-ink);border-radius:10px;padding:0 14px;font-weight:600}
+.status{font-weight:500}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--black);color:var(--black-ink);padding:9px 14px;border-radius:10px;font-size:.9rem;z-index:30;max-width:calc(100% - 32px)}
+.toast[hidden]{display:none}
+@media (max-width:420px){ .big{font-size:2rem} .macros{gap:8px 12px} }
+@media (prefers-reduced-motion: reduce){ .bar>span{transition:none} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="title-row">
+      <h1>Дневник на храненето</h1>
+      <button class="ghost small" data-act="settings">Настройки</button>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Раздели">
+      <button role="tab" data-act="tab" data-view="dnevnik" aria-selected="true">Дневник</button>
+      <button role="tab" data-act="tab" data-view="recepti" aria-selected="false">Рецепти</button>
+      <button role="tab" data-act="tab" data-view="pravila" aria-selected="false">Правила</button>
+    </nav>
+  </header>
+
+  <section class="view" id="view-dnevnik">
+    <div class="date-row">
+      <button class="icon-btn" data-act="prev" aria-label="Предишен ден">‹</button>
+      <div id="dateLabel"></div>
+      <button class="icon-btn" data-act="next" aria-label="Следващ ден">›</button>
+      <button class="ghost small" data-act="today">Днес</button>
+    </div>
+    <div class="search-wrap">
+      <div class="srow">
+  <input class="lsearch" id="logSearch" type="search" placeholder="Търси или кажи ястие и го добави…" autocomplete="off" aria-label="Търси ястие">
+        <button type="button" class="mic" id="micLog" aria-label="Търси с глас" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg></button>
+      </div>
+      <ul class="lresults" id="logResults" hidden></ul>
+      <p class="tip" id="micTip" style="display:flex;gap:6px;align-items:center"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>Може и с глас: натисни полето, после микрофона на клавиатурата и кажи ястието.</p>
+    </div>
+    <div class="seg" id="typeSeg" role="group" aria-label="Тип ден"></div>
+    <p class="tip" id="typeTip"></p>
+    <div id="banner"></div>
+    <section class="summary" id="summary" aria-live="polite"></section>
+    <div class="actions">
+      <button class="primary" data-act="autofill">Попълни деня автоматично</button>
+      <button data-act="copy">Копирай от вчера</button>
+      <button data-act="clear" id="clearBtn">Изчисти деня</button>
+    </div>
+    <div id="slots"></div>
+    <p class="foot">Натисни името на ястие, за да видиш рецептата. Стойностите са приблизителни — за домашно сготвени ястия с малко сол. Предложенията се смятат наново след всяко добавено ястие, така че последното хранене „довършва“ калориите и макросите. Записите се пазят само в този браузър.</p>
+  </section>
+
+  <section class="view" id="view-recepti" hidden>
+    <input class="rsearch" id="recSearch" type="search" placeholder="Търси рецепта: боб, пиле, сладко…" autocomplete="off" aria-label="Търсене на рецепта">
+    <div id="recList"></div>
+  </section>
+
+  <section class="view rules" id="view-pravila" hidden></section>
+</div>
+
+<div class="sheet-wrap" id="picker" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pickTitle">
+    <div class="sheet-head"><h3 id="pickTitle">Добави</h3><button class="ghost small" data-act="close">Затвори</button></div>
+    <div class="sheet-body">
+      <div class="scan-row">
+        <label class="scan-btn" for="bcFile"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><rect x="2" y="4" width="2" height="16"/><rect x="6" y="4" width="1" height="16"/><rect x="9" y="4" width="2" height="16"/><rect x="13" y="4" width="1" height="16"/><rect x="16" y="4" width="3" height="16"/><rect x="21" y="4" width="1" height="16"/></svg>Сканирай баркод</label>
+        <input id="bcFile" class="sr-only" type="file" accept="image/*" capture="environment">
+      </div>
+      <div class="bcpanel" id="bcPanel" hidden>
+        <p id="bcMsg" class="status"></p>
+        <div class="bc-manual"><input id="bcCode" inputmode="numeric" autocomplete="off" placeholder="или въведи цифрите под баркода" aria-label="Цифри на баркода"><button type="button" data-act="bcfind">Търси</button></div>
+        <div class="bcnew" id="bcNew" hidden>
+          <p id="bcNewText"></p>
+          <button type="button" class="save" data-act="bcmanual" style="align-self:flex-start;padding:9px 14px">Въведи стойностите</button>
+        </div>
+      </div>
+      <div class="srow">
+  <input id="pickSearch" type="search" placeholder="Търси или кажи: боб, пиле, кисело мляко…" autocomplete="off" aria-label="Търсене">
+        <button type="button" class="mic" id="micPick" aria-label="Търси с глас" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg></button>
+      </div>
+      <div class="chips" id="pickChips"></div>
+      <ul class="plist" id="pickList"></ul>
+      <details id="customBox">
+        <summary>Своя храна, която я няма в списъка</summary>
+        <form id="customForm" class="form-grid">
+          <label class="field wide">Име<input id="cf-name" required placeholder="напр. Домашна пастърма"></label>
+          <label class="field wide">Баркод (по желание)<input id="cf-code" inputmode="numeric" autocomplete="off" placeholder="за да се разпознава при сканиране"></label>
+          <label class="field">Група<select id="cf-cat"></select></label>
+          <label class="field">Порция, г<input id="cf-por" type="number" inputmode="decimal" min="1" value="100"></label>
+          <label class="field">ккал на 100 г<input id="cf-k" type="number" inputmode="decimal" min="0" step="any" required></label>
+          <label class="field">Белтъчини на 100 г<input id="cf-p" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
+          <label class="field">Въглехидрати на 100 г<input id="cf-c" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
+          <label class="field">Мазнини на 100 г<input id="cf-f" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
+          <label class="field">Сол на 100 г<input id="cf-s" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
+          <button class="save wide" type="submit">Запази и добави</button>
+        </form>
+      </details>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-wrap" id="recipeSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="recTitle">
+    <div class="sheet-head"><h3 id="recTitle">Рецепта</h3><button class="ghost small" data-act="closeRecipe">Затвори</button></div>
+    <div class="sheet-body recipe" id="recBody"></div>
+  </div>
+</div>
+
+<div class="sheet-wrap" id="chooser" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="chTitle">
+    <div class="sheet-head"><h3 id="chTitle">Добави към</h3><button class="ghost small" data-act="closeChooser">Затвори</button></div>
+    <div class="sheet-body" id="chBody"></div>
+  </div>
+</div>
+
+<div class="sheet-wrap" id="settings" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <div class="sheet-head"><h3 id="setTitle">Настройки и дневна цел</h3><button class="ghost small" data-act="close">Затвори</button></div>
+    <form class="sheet-body" id="setForm">
+      <div class="form-grid" style="margin-top:0">
+        <label class="field">Пол<select id="st-sex"><option value="m">Мъж</option><option value="f">Жена</option></select></label>
+        <label class="field">Възраст<input id="st-age" type="number" inputmode="numeric" min="18" max="100"></label>
+        <label class="field">Ръст, см<input id="st-height" type="number" inputmode="numeric" min="120" max="230"></label>
+        <label class="field">Тегло, кг<input id="st-weight" type="number" inputmode="decimal" min="35" max="250" step="any"></label>
+        <label class="field wide">Движение<select id="st-act">
+          <option value="1.375">Леко — повечето време седи</option>
+          <option value="1.55">Умерено — 12-часови смени и около 10 000 крачки</option>
+          <option value="1.725">Високо — тежка физическа работа</option>
+        </select></label>
+        <label class="field wide">Цел<select id="st-goal">
+          <option value="0">Задържане на теглото</option>
+          <option value="-300">Леко сваляне (−300 ккал на ден)</option>
+          <option value="-500">Сваляне (−500 ккал на ден)</option>
+        </select></label>
+        <label class="field wide">Или точна цел в ккал (по желание)<input id="st-manual" type="number" inputmode="numeric" min="1000" max="5000" placeholder="празно = сметни автоматично"></label>
+      </div>
+      <div class="sec-title">Макроси, % от калориите</div>
+      <div class="form-grid" style="margin-top:0;grid-template-columns:repeat(3,1fr)">
+        <label class="field">Белтъчини<input id="st-pp" type="number" inputmode="numeric" min="5" max="60"></label>
+        <label class="field">Въглехидрати<input id="st-cp" type="number" inputmode="numeric" min="5" max="80"></label>
+        <label class="field">Мазнини<input id="st-fp" type="number" inputmode="numeric" min="5" max="60"></label>
+      </div>
+      <label class="field">Сол на ден, г<input id="st-salt" type="number" inputmode="decimal" min="1" max="15" step="0.5"></label>
+      <div class="calc" id="setCalc"></div>
+      <button class="save" type="submit">Запази</button>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<script>
+/* ---------- Храни: [id, име, група, ккал, белтъчини, въглехидрати, мазнини, сол (всички на 100 г), порция г, флагове]
+   Флагове: S = нужна е гарнитура, G = гарнитура/салата, V = салата за мезе, L = порцията се мени малко, N = не се предлага само */
+const RAW = [
+ // Закуски
+ ['ovkasha','Овесена каша с мляко, ябълка и орехи','zak',115,4.4,15.4,3.9,0.06,330],
+ ['mishmash','Мишмаш (2 яйца, малко сирене)','zak',96,5.4,3.3,6.8,0.24,380],
+ ['omlet','Омлет от 2 яйца със спанак','zak',104,7.8,2.0,7.4,0.28,210],
+ ['panag','Яйца по панагюрски (олекотени)','zak',102,6.6,3.1,6.2,0.29,315],
+ ['barkani','Бъркани яйца с домати и лук','zak',86,5.7,2.5,6.0,0.23,260],
+ ['ovpal','Овесени палачинки (банан, яйца, овес)','zak',158,7.7,20,5.1,0.16,275],
+ ['popara','Попара с пълнозърнест хляб и малко сирене','zak',109,5.9,13.3,3.3,0.44,290],
+ ['kachamak','Качамак с кисело мляко и сирене','zak',81,3.1,11.6,2.1,0.27,400],
+ ['avokado','Варени яйца с авокадо на хляб','zak',136,7.7,8.8,7.8,0.33,245],
+ ['makizvara','Макарони с извара','zak',132,7.6,23.7,1.3,0.05,300],
+ ['palizvara','Палачинки с извара и мед (2 бр.)','zak',167,8.2,22,4.7,0.16,215],
+ ['kmoves','Кисело мляко с овес, плод и орехи','zak',103,3.7,12.5,3.8,0.06,340],
+ ['overnight','Овес за нощта в буркан','zak',89,3.9,12.6,2.0,0.07,370],
+ ['izvaramed','Извара с мед и плодове','zak',87,7.5,11.3,1.2,0.06,265],
+ ['sandizvara','Сандвич с извара, домат и краставица','zak',115,7.4,16.1,1.7,0.40,210],
+ ['hlhumus','Хляб с хумус и чушки','zak',138,6.0,19.4,4.1,0.65,210],
+ ['hlfastak','Хляб с фъстъчено масло и банан','zak',190,6.3,28.7,6.1,0.37,210],
+ ['2yaica','2 варени яйца, домат и филия хляб','zak',107,7.5,7.8,4.9,0.32,245],
+ ['sheik','Шейк: банан, кисело мляко и овес','zak',89,3.2,14.3,1.7,0.06,340],
+ ['muesli','Мюсли без захар с мляко','zak',111,4.6,17,2.6,0.12,250],
+ ['protkm','Протеин с кисело мляко, овес, какао и плод','zak',126,10.1,14.3,2.5,0.12,375],
+ // Основни ястия
+ ['bobchorba','Боб чорба (без наденица)','sup',85,5,12,2,0.5,400],
+ ['leshta','Леща','osn',95,6,13,2.2,0.5,350],
+ ['pilsupa','Пилешка супа (домашна)','sup',45,4,4,1.5,0.5,350],
+ ['pchushki','Пълнени чушки с пилешка кайма и ориз','osn',110,8,9,4.5,0.5,350],
+ ['sarmi','Сарми с прясно зеле и кайма','osn',115,7,8,6,0.6,300],
+ ['guvech','Гювеч с пилешко и зеленчуци','osn',95,7,8,4,0.5,400],
+ ['musaka','Мусака с пуешка кайма и кисело мляко','osn',125,8,11,5.5,0.5,350],
+ ['pilezoriz','Пиле с ориз','osn',140,11,15,4,0.5,350],
+ ['pilekartofi','Пиле с картофи на фурна','osn',130,10,11,5,0.5,380],
+ ['pilebulgur','Пиле с булгур и зеленчуци','osn',125,10,14,3.5,0.5,380],
+ ['pileyahnia','Пилешка яхния с картофи и моркови','osn',95,8,9,3,0.5,400],
+ ['pilezelen','Пилешко филе с печени зеленчуци','osn',105,13,6,3.5,0.4,380],
+ ['kavarma','Пилешка кавърма с гъби и чушки','osn',120,12,5,6,0.6,330],
+ ['grah','Яхния от грах с пилешко','osn',90,7,9,3,0.5,380],
+ ['fasul','Зелен фасул яхния (постна)','osn',55,2,7,2.2,0.4,380],
+ ['spanakoriz','Спанак с ориз','osn',75,2.6,10,2.8,0.4,350],
+ ['plakia','Риба плакия','osn',115,12,5,5.5,0.5,350],
+ ['skumria','Скумрия на фурна','osn',260,24,0,18,0.3,150,'S'],
+ ['safrid','Сафрид или цаца на фурна','osn',200,20,3,12,0.5,150,'S'],
+ ['syomga','Сьомга на фурна','osn',206,22,0,12.5,0.2,150,'S'],
+ ['pastarva','Пъстърва на фурна','osn',150,21,0,7,0.2,200,'S'],
+ ['pilefile','Пилешко филе на фурна','osn',165,31,0,3.6,0.4,150,'S'],
+ ['svinfile','Свинско филе на фурна','osn',145,26,0,4.5,0.4,150,'S'],
+ ['kufteta','Кюфтета на фурна (3 бр.)','osn',190,19,5,10,0.9,150,'S'],
+ ['kebapche','Кебапчета от заведение (2 бр.)','osn',270,16,2,22,2.0,120,'SLX'],
+ ['patatnik','Пататник (домашен)','osn',160,6,14,9,0.8,200],
+ ['banica','Баница (домашна, по-малко сирене)','osn',270,9,25,15,1.0,150,'L'],
+ ['pacha','Пача (домашна, без горната мазнина)','osn',130,13,1,8.5,0.9,300,'X'],
+ ['shkembe','Шкембе чорба','sup',70,6,3,4,0.7,400,'X'],
+ // Скара
+ ['nadenica','Свинска наденица на скара','ska',300,15,2,26,2.0,120,'SLX'],
+ ['karnache','Карначе на скара','ska',300,15,2,26,2.0,100,'SLX'],
+ ['mesana','Мешана скара (кебапче, кюфте, наденица)','ska',270,17,2,22,1.6,240,'SLX'],
+ ['kebapdom','Домашни кебапчета на скара (2 бр.)','ska',250,17,2,19,1.2,120,'SLX'],
+ ['kufteskara','Домашни кюфтета на скара (2 бр.)','ska',240,18,4,17,1.1,160,'SL'],
+ ['svinvrat','Свинска пържола от врат на скара','ska',250,25,0,17,0.6,200,'SLX'],
+ ['svinbut','Свинска пържола от бут или филе на скара','ska',170,28,0,6,0.5,180,'S'],
+ ['svinshish','Свински шишчета на скара (2 бр.)','ska',190,25,1,9,0.6,200,'S'],
+ ['pileshish','Пилешки шишчета на скара (2 бр.)','ska',160,27,1,5,0.6,200,'S'],
+ ['pilegardi','Пилешко филе на скара','ska',165,31,0,3.6,0.5,180,'S'],
+ ['pilebutche','Пилешки бутчета без кожа на скара','ska',180,26,0,8,0.5,180,'S'],
+ ['krilca','Пилешки крилца на скара','ska',250,23,0,17,0.6,150,'SLX'],
+ ['telstek','Телешки стек на скара','ska',200,28,0,9,0.4,180,'S'],
+ ['agneshko','Агнешки котлети на скара','ska',290,25,0,21,0.5,150,'SLX'],
+ ['skumriaskara','Скумрия на скара','ska',260,24,0,18,0.4,150,'S'],
+ ['cipura','Ципура или лаврак на скара','ska',170,24,0,8,0.4,200,'S'],
+ ['syomgaskara','Сьомга на скара','ska',210,22,0,13,0.3,150,'S'],
+ ['skaridi','Скариди на скара','ska',110,22,1,2,0.9,150,'S'],
+ ['kalmari','Калмари на скара','ska',120,18,3,3.5,0.6,150,'S'],
+ ['zelskara','Зеленчуци на скара (тиквички, патладжан, чушки)','ska',60,1.5,6,3.5,0.2,250,'G'],
+ ['gubiskara','Гъби на скара','ska',45,3,3,2.5,0.3,150,'G'],
+ ['kartofiskara','Картофи на скара','ska',120,2.5,20,3.5,0.2,200,'G'],
+ ['carevica','Царевица на скара (1 кочан)','ska',110,3.4,21,1.5,0.1,150,'G'],
+ // Гарнитури и салати
+ ['kartofi','Печени картофи с чубрица','gar',130,2.5,21,4,0.3,200,'G'],
+ ['oriz','Ориз (варен)','gar',130,2.7,28,0.3,0.1,150,'G'],
+ ['kafoviz','Кафяв ориз (варен)','gar',112,2.3,24,0.8,0.1,150,'G'],
+ ['bulgur','Булгур (варен)','gar',83,3.1,18.6,0.2,0.1,150,'G'],
+ ['zadusheni','Задушени зеленчуци','gar',45,1.5,6,1.8,0.2,200,'G'],
+ ['zelemorkov','Салата от зеле и морков','gar',45,1,6,2,0.3,200,'GV'],
+ ['shopska','Шопска салата с малко сирене','gar',66,2.4,3.5,5,0.19,340,'GV'],
+ ['zelenasal','Зелена или доматена салата','gar',35,1,4,1.8,0.2,250,'GV'],
+ ['pechchushki','Печени чушки с чесън и оцет','gar',50,1,6,2.5,0.3,150,'GV'],
+ ['turshia','Домашна туршия (смесена)','gar',25,1,4,0.3,2.5,100,'X'],
+ ['carska','Царска туршия','gar',45,1,5,2.5,2.0,100,'X'],
+ ['krastavichki','Кисели краставички','gar',12,0.5,2,0.2,2.5,80,'X'],
+ ['kiselozele','Кисело зеле','gar',20,1,4,0.1,2.0,150,'X'],
+ // Без готвене
+ ['tunsalata','Салата с риба тон, боб и домати','bez',89,9.4,6.7,2.7,0.28,430],
+ ['nahut','Нахут салата','bez',84,3.1,9.2,4,0.14,360],
+ ['snejanka','Салата „Снежанка“','bez',76,5.5,4.4,4.5,0.13,300,'V'],
+ ['tortila','Тортила с пилешко и зеленчуци','bez',145,13.5,14.3,3.5,0.46,240],
+ ['sardini','Сардини в зехтин (изцедени)','bez',208,24.6,0,11.5,0.9,90,'S'],
+ ['humuschinia','Хумус чиния с питка, зеленчуци и яйца','bez',115,6.7,11.5,4.7,0.4,370],
+ ['tabule','Табуле с булгур и нахут','bez',101,3.4,15.7,3.2,0.1,400],
+ ['izvarazelen','Извара с копър и краставица, с хляб','bez',101,8.5,11.8,1.7,0.29,320],
+ ['sandyaica','Сандвич с яйца','bez',151,9.3,13.3,5.7,0.56,235],
+ ['sandpile','Сандвич с пилешко и зеленчуци','bez',142,13.6,14.6,2.4,0.51,220],
+ ['pechenopile','Печено пиле от магазина (без кожата)','bez',175,28,0,7,1.0,150,'S'],
+ ['cveklo','Салата от цвекло с орехи','bez',81,2.8,9,4.1,0.29,275],
+ ['asorti','„Асорти“ чиния (ядки, сирене, плод, хляб, яйце)','bez',126,5.2,12.7,6.7,0.29,390],
+ // Снаксове и плодове
+ ['zelhumus','Моркови и зеленчуци с хумус','sna',83,3.3,11.3,3.5,0.4,150],
+ ['qbfastak','Ябълка с фъстъчено масло','sna',101,2.6,14.5,4.7,0,165],
+ ['bananorehi','Банан с шепа орехи','sna',152,2.7,21.9,7.6,0,135],
+ ['kmplod','Кисело мляко с плод','sna',57,2.2,7.9,1.3,0.06,250],
+ ['kiselo','Кисело мляко 2%','sna',60,3.5,4.5,2,0.1,200],
+ ['airqn','Айрян без сол','sna',37,1.7,2.3,1,0.1,250],
+ ['pechnahut','Печен нахут','sna',380,19,55,7,0.3,30],
+ ['pukanki','Домашни пуканки','sna',420,11,70,13,0.6,25],
+ ['orizovki','Оризовки с хумус','sna',234,7.9,34.8,7.8,0.76,58],
+ ['yaicedomat','Варено яйце с домат','sna',63,5,2.8,3.5,0.13,155],
+ ['krushasirene','Круша с парче сирене','sna',86,2.8,13,3.1,0.22,175],
+ ['kaisii','Сушени кайсии с бадеми','sna',325,7.8,53,13,0,40],
+ ['semki','Тиквени семки (несолени)','sna',559,30,11,49,0,20],
+ ['qbalka','Ябълка','sna',52,0.3,14,0.2,0,150],
+ ['banan','Банан','sna',89,1.1,23,0.3,0,120],
+ ['portokal','Портокал','sna',47,0.9,12,0.1,0,150],
+ ['krusha','Круша','sna',57,0.4,15,0.1,0,150],
+ ['mandarini','Мандарини (2 бр.)','sna',53,0.8,13,0.3,0,120],
+ ['grozde','Грозде','sna',69,0.7,18,0.2,0,150],
+ ['orehi','Орехи (несолени)','sna',654,15,14,65,0,25],
+ ['bademi','Бадеми (несолени)','sna',579,21,22,50,0,25],
+ // Сладко
+ ['pechqbalka','Печена ябълка с мед и орехи','sla',93,0.9,17.7,3.1,0,180],
+ ['bisk','Овесени бисквитки (домашни, 2 бр.)','sla',267,6.7,43,7.9,0,60],
+ ['musk','Мус от кисело мляко с какао и мед','sla',104,7.7,13,3.5,0.09,227],
+ ['kmmed','Кисело мляко с мед и боровинки','sla',76,2.5,12.4,1.4,0.07,225],
+ ['shokolad','Черен шоколад 70% (3 квадратчета)','sla',598,7.8,46,43,0,20,'L'],
+ ['furmi','Фурми с орехи','sla',391,6.2,57,19.4,0,34],
+ ['tahan','Тахан с мед','sla',450,8.7,51.7,27,0,30],
+ ['halva','Халва','sla',520,13,55,28,0.2,30,'L'],
+ ['mlqkooriz','Мляко с ориз (домашно)','sla',115,3.5,20,2,0.1,200],
+ ['tikvenik','Тиквеник (домашен)','sla',250,4,35,11,0.3,100],
+ ['keks','Кекс (домашен)','sla',360,6,50,15,0.5,70],
+ ['palmed','Палачинки с мед (2 бр.)','sla',215,5.2,34.6,6,0.21,140],
+ ['sladoled','Сладолед (1–2 топки)','sla',207,3.5,24,11,0.2,80],
+ ['kremkaramel','Крем карамел','sla',130,4.5,20,3.5,0.1,150],
+ ['sladkabanica','Сладка баница с тиква или ябълки','sla',230,4,32,10,0.3,120],
+ // Мезе
+ ['sudzhuk','Домашен суджук (свинско и телешко)','mez',330,28,1,24,3.5,60,'LX'],
+ ['lukanka','Луканка','mez',400,26,1,33,4.5,40,'LX'],
+ ['sirene','Сирене (накиснато)','mez',260,17,1,21,1.5,40,'N'],
+ ['kashkaval','Кашкавал','mez',350,25,1,27,2.2,30,'NX'],
+ ['maslini','Маслини (5 бр.)','mez',145,1,4,15,3.5,20,'NX'],
+ ['lutenica','Домашна лютеница','mez',90,2,12,4,0.8,30,'N'],
+ // Продукти
+ ['hlqb','Пълнозърнест хляб (1 филия = 35 г)','pro',247,10,41,3.4,1.1,35,'N'],
+ ['razhen','Ръжен хляб (1 филия = 35 г)','pro',250,8.5,48,3.3,1.2,35,'N'],
+ ['pitka','Питка / лаваш','pro',275,9,55,1.2,1.0,50,'N'],
+ ['tortilla','Пълнозърнеста тортила','pro',300,9,50,7.5,1.2,60,'N'],
+ ['ovesyadki','Овесени ядки (сухи)','pro',380,13,60,7,0,50,'N'],
+ ['protein','Протеин на прах (1 мерителна лъжица = 30 г)','pro',400,80,10,5,0.6,30,'N'],
+ ['mlqko','Прясно мляко 1,5%','pro',46,3.3,4.8,1.5,0.1,250,'N'],
+ ['cedeno','Цедено кисело мляко','pro',80,8,4.5,3.5,0.1,150,'N'],
+ ['izvara','Извара','pro',90,13,3.5,2,0.1,150,'N'],
+ ['yaice','Яйце (1 бр. = 55 г)','pro',143,12.6,0.7,9.5,0.36,55,'N'],
+ ['riba-ton','Риба тон в собствен сос','pro',116,26,0,1,0.8,120,'N'],
+ ['bobkons','Боб от консерва (изплакнат)','pro',90,6,16,0.4,0.25,120,'N'],
+ ['humus','Хумус','pro',166,8,14,10,1.0,60,'N'],
+ ['avokado2','Авокадо','pro',160,2,8.5,14.7,0,50,'N'],
+ ['domat','Домат','pro',18,0.9,3.9,0.2,0,150,'N'],
+ ['krastavica','Краставица','pro',15,0.7,3.6,0.1,0,150,'N'],
+ ['morkov','Морков','pro',41,0.9,10,0.2,0.1,100,'N'],
+ ['fastmaslo','Фъстъчено масло','pro',588,25,20,50,0,15,'N'],
+ ['med','Мед','pro',304,0.3,82,0,0,15,'N'],
+ ['zehtin','Зехтин / олио','pro',884,0,0,100,0,10,'N'],
+ // Нови ястия (избрани)
+ ['shakshuka',"Шакшука (яйца в доматен сос с чушки)",'zak',76,4,3.3,5,0.21,400],
+ ['omletgabi',"Омлет с гъби и чушки",'zak',85,6.2,3.1,5.6,0.21,280],
+ ['yaicapraz',"Яйца с праз",'zak',113,5.7,5.5,7.7,0.22,270],
+ ['mafiniyaica',"Мъфини от яйца и зеленчуци (4 бр.)",'zak',110,9,3,7,0.4,200],
+ ['tostyaice',"Тост с яйце и домат",'zak',164,8.2,17.7,6.1,0.55,175],
+ ['princesi',"Принцеси с пуешко и домат на фурна",'zak',197,13.2,17,6.4,0.76,180],
+ ['mekicifurna',"Мекици на фурна (2 бр.)",'zak',260,8,45,5,0.8,100],
+ ['frenskitost',"Френски тост на фурна",'zak',164,8.7,20.7,4.6,0.57,180],
+ ['palspanak',"Палачинки със спанак и извара (2 бр.)",'zak',120,7.3,13.9,3.7,0.23,280],
+ ['griz',"Гриз с мляко",'zak',103,4.6,17.6,1.4,0.09,290],
+ ['elda',"Каша от елда с мляко",'zak',85,4,15,1.4,0.06,330],
+ ['granola',"Кисело мляко с домашна гранола",'zak',125,4.6,13.8,4.6,0.08,240],
+ ['ovmafini',"Овесени мъфини с банан (2 бр.)",'zak',230,7,35,7,0.3,120],
+ ['chia',"Чия пудинг с кисело мляко и плод",'zak',83,3.6,9.2,3.3,0.07,300],
+ ['krtikva',"Крем супа от тиква",'sup',45,1.2,7,1.5,0.4,350],
+ ['krbrokoli',"Крем супа от броколи",'sup',45,2.5,5,1.8,0.4,350],
+ ['zelsupa',"Зеленчукова супа",'sup',35,1.2,5.5,1,0.4,400],
+ ['domsupa',"Доматена супа",'sup',45,1.3,7,1.5,0.4,350],
+ ['topcheta',"Супа топчета с пуешка кайма",'sup',60,5,4,2.5,0.5,400],
+ ['kurban',"Пилешка курбан чорба",'sup',50,5,3.5,1.8,0.5,400],
+ ['ribena',"Рибена чорба",'sup',50,6,3.5,1.5,0.5,400],
+ ['gabena',"Гъбена супа",'sup',40,2,4.5,1.8,0.4,350],
+ ['spanachena',"Спаначена супа",'sup',40,2,4,1.8,0.4,350],
+ ['krleshta',"Крем супа от червена леща",'sup',75,4.5,11,1.5,0.4,350],
+ ['kartsupa',"Картофена супа",'sup',55,1.5,9,1.5,0.4,350],
+ ['manastir',"Манастирска чорба",'sup',70,4,10,1.8,0.5,400],
+ ['pileshishfurna',"Пилешки шишчета на фурна (2 бр.)",'osn',155,26,2,5,0.6,200,'S'],
+ ['pilebamia',"Пиле с бамя",'osn',90,9,5,3.5,0.5,380],
+ ['pilekuftenca',"Пилешки кюфтенца на фурна",'osn',170,20,6,7,0.8,150,'S'],
+ ['pueshkopraz',"Пуешко с праз",'osn',100,10,6,4,0.5,350],
+ ['pilebrokoli',"Пилешко с броколи и ориз",'osn',110,10,12,2.5,0.4,380],
+ ['pilezele',"Пилешко с прясно зеле",'osn',80,8,5,3,0.5,380],
+ ['pueshkokartofi',"Пуешко филе на фурна с картофи",'osn',120,11,12,3,0.4,380],
+ ['pilestirfry',"Пилешко със зеленчуци на тиган",'osn',100,11,5,4,0.6,350],
+ ['frikase',"Пилешко фрикасе (олекотено)",'osn',95,10,5,4,0.5,380],
+ ['butchetamorkovi',"Пилешки бутчета с моркови и грах",'osn',105,10,7,4,0.5,380],
+ ['pueshkikuftespanak',"Пуешки кюфтета със спанак",'osn',150,18,5,6,0.7,150,'S'],
+ ['pulnenitikvichki',"Пълнени тиквички с пилешка кайма",'osn',85,7,5,4,0.4,380],
+ ['pulnenidomati',"Пълнени домати с кайма и ориз",'osn',95,6,9,4,0.4,350],
+ ['musakatikvichki',"Мусака с тиквички",'osn',95,8,5,5,0.5,380],
+ ['svinzele',"Свинско с прясно зеле",'osn',90,8,5,4.5,0.5,380],
+ ['svinpraz',"Свинско с праз",'osn',100,9,6,4.5,0.5,350],
+ ['svingabi',"Свинско с гъби",'osn',105,11,3,5.5,0.5,330],
+ ['svinshishfurna',"Свински шишчета от филе на фурна (2 бр.)",'osn',170,25,2,7,0.6,200,'S'],
+ ['kebapgarne',"Кебап в гърне (постно месо)",'osn',120,11,5,6,0.6,330],
+ ['televareno',"Телешко варено със зеленчуци",'osn',85,10,4,3,0.4,400],
+ ['teleyahnia',"Телешка яхния с картофи",'osn',105,9,9,3.5,0.5,400],
+ ['telegrah',"Телешко с грах",'osn',105,10,8,3.5,0.5,380],
+ ['chushkibyurek',"Чушки бюрек на фурна",'osn',150,7,10,9,0.7,250],
+ ['svinbulgur',"Яхния от свинско филе с булгур",'osn',120,10,13,3,0.5,380],
+ ['hek',"Хек на фурна със зеленчуци",'osn',85,11,5,2.5,0.4,400],
+ ['ribnikufteta',"Рибни кюфтета на фурна",'osn',150,15,9,6,0.6,150,'S'],
+ ['ribaoriz',"Риба с ориз на фурна",'osn',120,10,13,3,0.4,380],
+ ['palamud',"Паламуд на фурна",'osn',200,22,0,12,0.3,180,'S'],
+ ['syomgabrokoli',"Сьомга с броколи",'osn',130,12,3,8,0.3,330],
+ ['skaridizel',"Скариди със зеленчуци и чесън",'osn',75,11,4,2,0.6,300],
+ ['ribaton_stek',"Риба тон (стек) на тиган",'osn',145,29,0,3,0.3,160,'S'],
+ ['byalariba_domat',"Бяла риба в доматен сос",'osn',90,11,4,3,0.4,350],
+ ['bobmanastir',"Боб по манастирски (на фурна)",'osn',110,6,15,3,0.5,350],
+ ['leshtaoriz',"Леща яхния с ориз",'osn',105,5.5,17,2,0.4,350],
+ ['nahutspanak',"Нахут яхния със спанак",'osn',105,5.5,13,3.5,0.4,350],
+ ['chervenaleshta',"Червена леща с моркови и кимион",'osn',100,6,15,2,0.4,350],
+ ['chushkioriz',"Пълнени чушки с ориз (постни)",'osn',85,1.8,14,2.5,0.4,350],
+ ['tikvichkioriz',"Тиквички с ориз и копър",'osn',70,1.8,11,2.2,0.4,350],
+ ['lazanya',"Лазаня (олекотена)",'osn',140,10,14,5,0.6,300],
+ ['pica',"Домашна пица на пълнозърнест блат (2 парчета)",'osn',210,10,28,6.5,1.0,200],
+ ['ovcharska',"Овчарска салата (олекотена)",'bez',85,5.5,3.5,5.5,0.5,350],
+ ['gracka',"Гръцка салата с малко сирене",'gar',80,2.5,4,6,0.5,300,'GV'],
+ ['kartofenasal',"Картофена салата с лук и оцет",'gar',95,1.8,15,3,0.3,250,'G'],
+ ['bobsalata',"Боб салата с лук и магданоз",'bez',110,6,15,3,0.3,250],
+ ['cezar',"Салата Цезар (олекотена)",'bez',110,11,5,5,0.6,300],
+ ['kyopolu',"Кьопоолу",'gar',65,1.2,7,3.5,0.3,150,'GV'],
+ ['ruska',"Руска салата с кисело мляко (олекотена)",'gar',85,4,9,3.5,0.5,200,'G'],
+ ['pyure',"Картофено пюре с кисело мляко",'gar',85,2.5,15,1.8,0.3,200,'G'],
+ ['pechtikvichki',"Печени тиквички",'gar',45,1.5,4,2.5,0.2,200,'G'],
+ ['sandtun',"Сандвич с риба тон и краставица",'bez',135,13,15,2.2,0.6,220],
+ ['sandmocarela',"Сандвич с моцарела и домат",'bez',175,9,17,7.5,0.6,200],
+ ['rolc',"Ролц с домашно печено пуешко и зеленчуци",'bez',150,13,16,3.5,0.5,230],
+ ['kutiaizvara',"Кутия с извара, варени яйца и зеленчуци",'bez',80,9,3.5,3.5,0.2,350],
+ ['nahutton',"Нахут с риба тон и червен лук",'bez',105,11,9,2.5,0.35,300],
+ ['tostizvara',"Тост с извара и домати",'bez',125,8,16,2.5,0.45,200],
+ ['salatapile',"Салата с готово печено пиле (без кожата)",'bez',85,10,3,3.5,0.5,350],
+ ['carevicavarena',"Варена царевица (1 кочан)",'sna',96,3.4,21,1.5,0,150],
+ ['sushenisilvi',"Сушени сливи",'sna',240,2.2,64,0.4,0,40],
+ ['yagodi',"Ягоди",'sna',32,0.7,7.7,0.3,0,200],
+ ['praskova',"Праскова",'sna',39,0.9,10,0.3,0,150],
+ ['dinia',"Диня",'sna',30,0.6,7.6,0.2,0,300],
+ ['kivi',"Киви (2 бр.)",'sna',61,1.1,15,0.5,0,150],
+ ['slivi',"Сливи",'sna',46,0.7,11,0.3,0,150],
+ ['chereshi',"Череши",'sna',63,1.1,16,0.2,0,150],
+ ['papesh',"Пъпеш",'sna',34,0.8,8,0.2,0,250],
+ ['tikvenimafini',"Тиквени мъфини (2 бр.)",'sla',240,5,35,9,0.3,120],
+ ['bananovhlqb',"Бананов хляб (1 парче)",'sla',260,6,40,8,0.4,80],
+ ['plodovasalata',"Плодова салата с кисело мляко",'sla',65,1.8,13,1,0.04,250],
+ ['nicecream',"Сладолед от замразен банан",'sla',95,2.5,20,1,0.03,150],
+ ['pechenikrushi',"Печени круши с канела (1 бр.)",'sla',75,0.5,18,1.2,0,200],
+ ['chiizkeik',"Чийзкейк от извара (олекотен, 1 парче)",'sla',160,10,20,4.5,0.2,120],
+ ['jele',"Плодово желе",'sla',55,1.5,12,0,0,150],
+ ['kozunak',"Козунак (празнично парче)",'sla',330,8,55,9,0.4,80],
+ ['kmmedorehi',"Кисело мляко с мед и орехи",'sla',120,4,12,6.5,0.07,200],
+ ['pastarma',"Домашна пастърма",'mez',250,38,1,9,4.5,30,'LX'],
+ ['pulneniyaica',"Пълнени яйца с кисело мляко и горчица (2 бр.)",'mez',140,11,2,9.5,0.5,120],
+ ['pechenigabi',"Печени гъби с чесън и магданоз",'mez',55,3,3.5,3,0.3,150],
+ ['marinovanigabi',"Мариновани гъби (домашни)",'mez',35,2,4,1.5,1.2,80],
+ ['hapkitikvichki',"Хапки от тиквички с кисело мляко",'mez',90,4,7,5,0.4,200],
+ // Напитки (на 100 мл, порция в мл)
+ ['kafe','Кафе с мляко и 1 ч.л. захар','nap',30,1,4.3,0.8,0.05,150,'ND'],
+ ['sokdrenki','Домашен сок от дренки (без захар)','nap',45,0.3,11,0.1,0,200,'ND'],
+ ['sokqbkr','Домашен сок от ябълки и круши (без захар)','nap',46,0.1,11.5,0.1,0,200,'ND'],
+ ['vino','Домашно червено вино','nap',85,0.1,2.6,0,0,150,'NDX'],
+ ['rakia','Домашна ракия','nap',235,0,0,0,0,50,'NDX'],
+ ['uiski','Уиски','nap',250,0,0,0,0,50,'NDX'],
+ ['vodka','Водка','nap',231,0,0,0,0,50,'NDX']
+];
+const CATS = {zak:'Закуски',osn:'Основни ястия',sup:'Супи и чорби',bez:'Без готвене',gar:'Гарнитури и салати',sna:'Снаксове и плодове',sla:'Сладко',ska:'Скара',mez:'Мезе',nap:'Напитки',pro:'Продукти'};
+
+const TYPES = {
+  day:{label:'Дневна', tip:'Смяна 7:00–19:00. Последното по-сериозно хранене е 2–3 часа преди сън.', slots:[
+    {id:'zak', name:'Закуска', time:'~6:00', share:.25, cats:['zak']},
+    {id:'s1', name:'Снакс', time:'~9:30', share:.07, cats:['sna']},
+    {id:'obqd', name:'Обяд', time:'~12:30', share:.30, cats:['osn','bez']},
+    {id:'s2', name:'Снакс', time:'~16:00', share:.08, cats:['sna']},
+    {id:'vech', name:'Вечеря', time:'~19:45', share:.22, cats:['osn','bez','mez']},
+    {id:'sla', name:'Сладко', time:'след хранене', share:.08, cats:['sla'], clamp:[.7,1.3]}
+  ]},
+  night:{label:'Нощна', tip:'Смяна 19:00–7:00. Голямото топло хранене е преди смяната, между 2 и 5 ч само леко.', slots:[
+    {id:'parvo', name:'Първо хранене', time:'след ставане', share:.18, cats:['zak','osn','bez']},
+    {id:'predi', name:'Голямо хранене преди смяната', time:'~18:00', share:.30, cats:['osn']},
+    {id:'smqna', name:'На смяната', time:'23:00–0:30', share:.24, cats:['osn','bez']},
+    {id:'nosht', name:'Лек снакс през нощта', time:'2:00–5:00', share:.07, cats:['sna']},
+    {id:'sutrin', name:'Лека закуска след смяната', time:'~7:30', share:.13, cats:['zak']},
+    {id:'sla', name:'Сладко', time:'след хранене', share:.08, cats:['sla'], clamp:[.7,1.3]}
+  ]},
+  rest:{label:'Почивка', tip:'Добър ден да се сготви тенджера за следващите смени.', slots:[
+    {id:'zak', name:'Закуска', time:'сутрин', share:.25, cats:['zak']},
+    {id:'obqd', name:'Обяд', time:'обед', share:.30, cats:['osn','bez']},
+    {id:'s1', name:'Снакс', time:'следобед', share:.10, cats:['sna']},
+    {id:'vech', name:'Вечеря', time:'вечер', share:.27, cats:['osn','bez','mez']},
+    {id:'sla', name:'Сладко', time:'след хранене', share:.08, cats:['sla'], clamp:[.7,1.3]}
+  ]}
+};
+Object.values(TYPES).forEach(t=>t.slots.forEach(s=>{ if(s.cats.includes('osn')){ ['ska','sup'].forEach(c=>{ if(!s.cats.includes(c)) s.cats.push(c); }); } }));
+const SLOTNAME = {};
+Object.values(TYPES).forEach(t=>t.slots.forEach(s=>{ if(!SLOTNAME[s.id]) SLOTNAME[s.id]=s.name; }));
+
+/* ---------- Рецепти: id -> [за колко, време, продукти[], стъпки[], бележка] ---------- */
+const REC = {
+ shakshuka:["1 порция", "20 мин", ["2 яйца", "2 домата или 200 г доматено пюре", "1 чушка", "½ глава лук", "1 скилидка чесън", "1 с.л. олио", "червен пипер, кимион, магданоз"], ["Задуши лука, чушката и чесъна в олиото 5 мин.", "Добави доматите и подправките и вари 8–10 мин до сгъстяване.", "Направи 2 гнезда, счупи яйцата в тях, похлупи и готви 5–6 мин.", "Поръси с магданоз. Без допълнителна сол."]],
+ omletgabi:["1 порция", "10 мин", ["2 яйца", "100 г гъби", "½ чушка", "1 ч.л. олио", "черен пипер, магданоз"], ["Задуши нарязаните гъби и чушка в олиото 4–5 мин.", "Разбий яйцата с пипера и залей зеленчуците.", "Готви под капак на слаб огън 3–4 мин и сгъни на две."]],
+ yaicapraz:["1 порция", "15 мин", ["2 яйца", "1 стрък праз (~150 г)", "1 с.л. олио", "червен и черен пипер"], ["Нарежи праза на колелца и го задуши в олиото с малко вода 8 мин.", "Добави червения пипер, разбий яйцата отгоре и бъркай до готовност."]],
+ mafiniyaica:["8 броя", "30 мин", ["6 яйца", "1 чушка", "1 тиквичка или шепа спанак", "½ глава лук", "40 г сирене, накиснато", "черен пипер, риган"], ["Нарежи зеленчуците на ситно и ги разпредели във форми за мъфини.", "Разбий яйцата с подправките и натрошеното сирене и залей.", "Печи 20 мин на 180°C."], "Стоят 3 дни в хладилника — удобни за кутия за смяна."],
+ tostyaice:["1 порция", "10 мин", ["2 филии пълнозърнест хляб", "1 яйце", "1 малък домат", "капка олио", "черен пипер"], ["Препечи хляба.", "Изпържи яйцето на очи с капка олио или го свари.", "Нареди домата и яйцето върху хляба и поръси с пипер."]],
+ princesi:["2 броя", "20 мин", ["2 филии пълнозърнест хляб", "60 г пуешка кайма", "1 домат", "20 г настъргано сирене", "чубрица, черен пипер"], ["Смеси каймата с подправките и я намажи на тънко върху хляба.", "Сложи резени домат и поръси със сиренето.", "Печи 12–15 мин на 200°C."]],
+ mekicifurna:["8 броя", "1 ч 30 мин (с втасване)", ["300 г брашно", "200 г кисело мляко", "1 яйце", "10 г мая", "1 ч.л. захар", "½ ч.л. сол", "1 с.л. олио"], ["Замеси меко тесто от всичко и го остави да втаса 1 ч.", "Раздели на 8 топки и ги разстели на питки върху хартия за печене.", "Намажи с капка олио и печи 15 мин на 200°C.", "Сервирай с извара, мед или сладко."], "На фурна, а не пържени — така са много по-леки."],
+ frenskitost:["1 порция", "20 мин", ["2 филии пълнозърнест хляб", "1 яйце", "50 мл прясно мляко", "канела", "1 ч.л. мед"], ["Разбий яйцето с млякото и канелата.", "Накисни филиите от двете страни и ги нареди върху хартия за печене.", "Печи 12–15 мин на 200°C, обърни веднъж. Полей с меда."]],
+ palspanak:["2 палачинки", "25 мин", ["1 яйце", "100 мл прясно мляко", "40 г брашно", "100 г спанак", "80 г извара", "чесън, черен пипер"], ["Изпечи 2 тънки палачинки (яйце, мляко, брашно).", "Задуши спанака 3 мин с чесъна и го смеси с изварата.", "Напълни палачинките и ги навий."]],
+ griz:["1 порция", "10 мин", ["40 г грис", "250 мл прясно мляко 1,5%", "2 ч.л. захар", "канела"], ["Сложи млякото да заври.", "Сипи гриса на тънка струя, като бъркаш, и вари 3–4 мин.", "Добави захарта и поръси с канела."]],
+ elda:["1 порция", "20 мин", ["50 г елда", "200 мл прясно мляко", "1 ч.л. мед"], ["Измий елдата и я свари в 150 мл вода 12–15 мин.", "Добави млякото и затопли 2–3 мин.", "Подслади с меда."]],
+ granola:["около 8 порции гранола", "30 мин", ["300 г овесени ядки", "80 г орехи или бадеми", "3 с.л. мед", "2 с.л. олио", "канела", "за порция: 200 г кисело мляко + 40 г гранола"], ["Смеси овеса, ядките, меда, олиото и канелата.", "Разстели в тава и печи 20–25 мин на 160°C, като разбъркваш.", "Изстуди и съхранявай в буркан. Сервирай с кисело мляко."]],
+ ovmafini:["12 броя", "35 мин", ["2 зрели банана", "2 яйца", "200 г овесени ядки (смлени)", "150 мл прясно мляко", "1 ч.л. бакпулвер", "канела", "шепа боровинки"], ["Смачкай бананите и ги разбъркай с яйцата и млякото.", "Добави смления овес, бакпулвера и канелата, после боровинките.", "Разпредели във форми и печи 20–25 мин на 180°C."]],
+ chia:["1 порция", "5 мин + нощ", ["2 с.л. чия (20 г)", "150 г кисело мляко", "50 мл прясно мляко", "80 г плод"], ["Смеси чията с млякото и киселото мляко.", "Остави в хладилника поне 4 часа или за през нощта.", "Сутринта добави нарязания плод."]],
+ krtikva:["4 порции", "40 мин", ["800 г тиква", "1 картоф", "1 глава лук", "1 морков", "2 с.л. олио", "1 ч.л. сол", "джинджифил или канела на върха на ножа"], ["Задуши лука в олиото, добави нарязаните тиква, картоф и морков.", "Залей с 1 л вода и вари 25 мин.", "Пасирай, подправи и сервирай с лъжица кисело мляко."]],
+ krbrokoli:["4 порции", "30 мин", ["600 г броколи", "1 картоф", "1 глава лук", "2 с.л. олио", "200 мл прясно мляко", "1 ч.л. сол", "черен пипер"], ["Задуши лука в олиото, добави броколите и картофа.", "Залей с 800 мл вода и вари 20 мин.", "Пасирай с млякото и подправи."]],
+ zelsupa:["4 порции", "35 мин", ["2 картофа", "2 моркова", "1 тиквичка", "1 чушка", "шепа зелен фасул", "1 глава лук", "2 домата", "2 с.л. олио", "магданоз", "1 ч.л. сол"], ["Задуши лука в олиото.", "Добави нарязаните зеленчуци и 1,5 л вода и вари 25 мин.", "Подправи с магданоз и солта."]],
+ domsupa:["4 порции", "30 мин", ["1 кг домати или 2 буркана доматено пюре", "1 глава лук", "2 скилидки чесън", "2 с.л. олио", "1 ч.л. захар", "босилек, черен пипер", "1 ч.л. сол"], ["Задуши лука и чесъна в олиото.", "Добави доматите и 500 мл вода и вари 20 мин.", "Пасирай, подправи и сервирай с лъжица кисело мляко."]],
+ topcheta:["4 порции", "45 мин", ["300 г пуешка кайма", "2 с.л. ориз", "1 морков", "1 картоф", "1 чушка", "1 глава лук", "1 яйце + 2 с.л. кисело мляко за застройка", "чубрица, магданоз", "1 ч.л. сол"], ["Смеси каймата с ориза и чубрицата и оформи малки топчета.", "Свари зеленчуците в 1,5 л вода 10 мин, пусни топчетата и вари 20 мин.", "Застрой с разбитите яйце и кисело мляко и поръси с магданоз."]],
+ kurban:["4 порции", "1 ч", ["2 пилешки бутчета без кожа", "1 морков", "1 чушка", "1 глава лук", "2 домата", "2 с.л. ориз", "червен пипер, джоджен", "1 ч.л. сол"], ["Свари месото в 2 л вода 40 мин, обезкости го.", "Добави нарязаните зеленчуци и ориза и вари 15 мин.", "Подправи с червения пипер, джоджена и солта."]],
+ ribena:["4 порции", "40 мин", ["500 г бяла риба (филе или глави за бульон)", "1 морков", "1 глава лук", "1 картоф", "2 домата", "1 лимон", "магданоз, дафинов лист", "1 ч.л. сол"], ["Свари рибата 15 мин, извади я и прецеди бульона.", "Свари зеленчуците в бульона 15 мин.", "Върни рибата, подкиси с лимон и поръси с магданоз."]],
+ gabena:["4 порции", "30 мин", ["500 г гъби", "1 картоф", "1 глава лук", "2 с.л. олио", "200 мл прясно мляко", "копър, черен пипер", "1 ч.л. сол"], ["Задуши лука и гъбите в олиото 8 мин.", "Добави картофа и 1 л вода и вари 15 мин.", "Добави млякото, копъра и подправките."]],
+ spanachena:["4 порции", "30 мин", ["500 г спанак", "1 картоф", "1 глава лук", "2 с.л. ориз", "2 с.л. олио", "1 яйце + 2 с.л. кисело мляко за застройка", "1 ч.л. сол"], ["Задуши лука в олиото, добави картофа, ориза и 1,2 л вода и вари 15 мин.", "Добави нарязания спанак за 5 мин.", "Застрой с разбитите яйце и кисело мляко."]],
+ krleshta:["4 порции", "30 мин", ["200 г червена леща", "1 морков", "1 глава лук", "1 домат", "2 с.л. олио", "кимион, червен пипер", "лимон", "1 ч.л. сол"], ["Задуши лука и моркова в олиото, добави подправките.", "Добави лещата, домата и 1,2 л вода и вари 20 мин.", "Пасирай и подкиси с лимон."]],
+ kartsupa:["4 порции", "35 мин", ["5 картофа", "1 морков", "1 глава лук", "2 с.л. олио", "200 мл прясно мляко", "копър, черен пипер", "1 ч.л. сол"], ["Задуши лука и моркова в олиото.", "Добави картофите на кубчета и 1,2 л вода и вари 20 мин.", "Добави млякото и копъра."]],
+ manastir:["4 порции", "2 ч (+ накисване)", ["150 г зрял боб", "50 г леща", "1 картоф", "1 морков", "1 чушка", "1 глава лук", "2 домата", "2 с.л. олио", "джоджен, чубрица", "1 ч.л. сол"], ["Свари накиснатия боб до омекване (около 1 ч).", "Добави лещата и нарязаните зеленчуци и вари 25 мин.", "Подправи с джоджена, чубрицата и солта."]],
+ pileshishfurna:["2 шишчета", "30 мин + мариноване", ["200 г пилешко филе на кубчета", "1 чушка", "1 червен лук", "2 с.л. кисело мляко", "1 ч.л. олио", "червен пипер, чесън, щипка сол"], ["Мариновай месото в киселото мляко и подправките 1 ч.", "Наниж с чушката и лука на дървени шишчета.", "Печи 20–25 мин на 200°C, обърни веднъж."]],
+ pilebamia:["4 порции", "50 мин", ["600 г пилешко без кожа", "500 г бамя", "1 глава лук", "3 домата", "2 с.л. олио", "1 лимон", "червен пипер, магданоз", "1 ч.л. сол"], ["Запечатай месото с лука в олиото.", "Добави доматите и 400 мл вода и вари 20 мин.", "Добави бамята (предварително накисната в оцетна вода 15 мин) и вари още 15 мин.", "Подкиси с лимон."]],
+ pilekuftenca:["4 порции (16 бр.)", "35 мин", ["600 г пилешка кайма", "1 глава лук, настърган", "1 яйце", "3 с.л. овесени ядки", "магданоз, кимион, черен пипер", "1 ч.л. сол"], ["Омеси всичко и остави 20 мин.", "Оформи малки кюфтенца и ги нареди върху хартия за печене.", "Печи 20 мин на 200°C."]],
+ pueshkopraz:["4 порции", "45 мин", ["600 г пуешко месо", "3 стръка праз", "2 моркова", "2 с.л. олио", "червен пипер, дафинов лист", "1 ч.л. сол"], ["Запечатай нарязаното месо в олиото.", "Добави праза и морковите, задуши 5 мин.", "Налей 400 мл вода и вари под капак 25 мин."]],
+ pilebrokoli:["4 порции", "35 мин", ["500 г пилешко филе", "400 г броколи", "200 г ориз", "1 глава лук", "2 с.л. олио", "чесън, черен пипер", "1 ч.л. сол"], ["Свари ориза.", "Запечатай нарязаното месо с лука и чесъна в олиото.", "Добави броколите и малко вода и задуши 8 мин.", "Смеси с ориза."]],
+ pilezele:["4 порции", "50 мин", ["600 г пилешко без кожа", "½ глава прясно зеле", "1 глава лук", "2 домата", "2 с.л. олио", "червен пипер, чубрица", "1 ч.л. сол"], ["Запечатай месото с лука в олиото.", "Добави нарязаното зеле, доматите и 300 мл вода.", "Задуши под капак 30 мин или печи в тава 40 мин на 200°C."]],
+ pueshkokartofi:["4 порции", "1 ч", ["600 г пуешко филе", "800 г картофи", "1 глава лук", "2 с.л. олио", "чубрица, червен пипер, черен пипер", "1 ч.л. сол"], ["Нарежи картофите и лука, смеси с олиото и подправките.", "Нареди филето отгоре и налей 150 мл вода.", "Печи 45–50 мин на 200°C."]],
+ pilestirfry:["2 порции", "20 мин", ["300 г пилешко филе", "1 чушка", "1 морков", "1 тиквичка", "½ глава лук", "1 с.л. олио", "чесън, джинджифил", "1 ч.л. соев сос с намалена сол"], ["Нарежи месото и зеленчуците на тънки ивици.", "Запечатай месото на силен огън 4–5 мин.", "Добави зеленчуците за 5 мин и овкуси с чесъна и соевия сос."], "Само 1 ч.л. соев сос — той е много солен."],
+ frikase:["4 порции", "50 мин", ["600 г пилешко без кожа", "2 моркова", "1 глава лук", "200 г гъби", "1 с.л. брашно", "2 с.л. олио", "за застройка: 1 яйце + 150 г кисело мляко", "копър", "1 ч.л. сол"], ["Свари месото в 800 мл вода 25 мин.", "Задуши лука, моркова и гъбите в олиото, добави брашното и разреди с бульона.", "Върни месото и вари 10 мин. Застрой с яйцето и киселото мляко и поръси с копър."]],
+ butchetamorkovi:["4 порции", "1 ч", ["8 пилешки бутчета без кожа", "4 моркова", "300 г грах", "1 глава лук", "2 с.л. олио", "копър", "1 ч.л. сол"], ["Запечатай бутчетата с лука в олиото.", "Добави морковите и 400 мл вода и вари 25 мин.", "Добави граха и вари още 10 мин. Поръси с копър."]],
+ pueshkikuftespanak:["4 порции (12 бр.)", "35 мин", ["600 г пуешка кайма", "150 г спанак, нарязан", "1 яйце", "3 с.л. овесени ядки", "чесън, черен пипер", "1 ч.л. сол"], ["Омеси всичко.", "Оформи 12 кюфтета и ги нареди върху хартия за печене.", "Печи 20–25 мин на 200°C."]],
+ pulnenitikvichki:["4 порции", "1 ч", ["4 тиквички", "400 г пилешка кайма", "80 г ориз", "1 глава лук", "2 домата", "1 с.л. олио", "копър, джоджен", "1 ч.л. сол", "за заливка: 150 г кисело мляко + 1 яйце"], ["Разполови тиквичките и издълбай средата.", "Задуши лука, каймата и издълбаната част, добави ориза и подправките.", "Напълни тиквичките, налей малко вода и печи 40 мин на 200°C.", "Залей с разбитите кисело мляко и яйце и печи още 10 мин."]],
+ pulnenidomati:["4 порции", "1 ч", ["8 едри домата", "300 г постна кайма", "100 г ориз", "1 глава лук", "1 с.л. олио", "джоджен, черен пипер", "1 ч.л. сол"], ["Отрежи капачетата и издълбай доматите.", "Задуши лука и каймата, добави ориза, издълбаната част и подправките.", "Напълни доматите, захлупи с капачетата и печи 40 мин на 180°C."]],
+ musakatikvichki:["4 порции", "1 ч 10 мин", ["4 тиквички", "400 г пуешка кайма", "1 глава лук", "2 домата", "1 с.л. олио", "червен пипер, чубрица", "1 ч.л. сол", "заливка: 300 г кисело мляко + 2 яйца"], ["Задуши лука и каймата с доматите и подправките.", "Нареди в тава редове тиквички на кръгчета и кайма.", "Печи 30 мин на 200°C, залей с разбитите кисело мляко и яйца и печи още 15 мин."]],
+ svinzele:["4 порции", "1 ч 15 мин", ["500 г свинско филе или бут", "½ глава прясно зеле", "1 глава лук", "2 домата", "2 с.л. олио", "червен пипер, черен пипер на зърна", "1 ч.л. сол"], ["Запечатай нарязаното месо с лука в олиото.", "Добави зелето, доматите, подправките и 300 мл вода.", "Печи в тава под фолио 50 мин на 200°C, после 10 мин без фолио."]],
+ svinpraz:["4 порции", "1 ч", ["500 г свинско филе или бут", "4 стръка праз", "2 с.л. олио", "червен пипер, черен пипер", "1 ч.л. сол"], ["Запечатай нарязаното месо в олиото.", "Добави праза и червения пипер, налей 400 мл вода.", "Задуши под капак 35–40 мин."]],
+ svingabi:["4 порции", "50 мин", ["500 г свинско филе", "400 г гъби", "1 глава лук", "2 с.л. олио", "чубрица, черен пипер", "1 ч.л. сол"], ["Запечатай нарязаното месо с лука в олиото.", "Добави гъбите и подправките и малко вода.", "Задуши под капак 30 мин."]],
+ svinshishfurna:["2 шишчета", "35 мин + мариноване", ["200 г свинско филе на кубчета", "1 чушка", "1 глава лук", "1 ч.л. олио", "червен пипер, кимион", "щипка сол"], ["Мариновай месото с олиото и подправките 1 ч.", "Наниж с чушката и лука.", "Печи 25 мин на 200°C, обърни веднъж."]],
+ kebapgarne:["4 гърнета", "1 ч 15 мин", ["500 г постно свинско или телешко", "200 г гъби", "1 глава лук", "2 домата", "1 чушка", "2 с.л. олио", "червен пипер, чубрица, дафинов лист", "1 ч.л. сол"], ["Запечатай месото с лука в олиото.", "Разпредели в гърнета с гъбите, чушката, доматите и подправките.", "Налей по малко вода, захлупи и печи 50 мин на 200°C."]],
+ televareno:["4 порции", "2 ч", ["600 г постно телешко", "4 картофа", "2 моркова", "1 глава лук", "1 корен целина", "черен пипер на зърна, дафинов лист", "1 ч.л. сол"], ["Вари месото в 2 л вода 1,5 ч, като обираш пяната.", "Добави зеленчуците и вари още 25 мин.", "Сервирай месото със зеленчуците и малко от бульона."]],
+ teleyahnia:["4 порции", "1 ч 45 мин", ["500 г постно телешко", "5 картофа", "1 глава лук", "2 моркова", "2 домата", "2 с.л. олио", "червен пипер, дафинов лист, магданоз", "1 ч.л. сол"], ["Запечатай месото с лука в олиото.", "Налей 800 мл вода и вари 1 ч.", "Добави картофите, морковите и доматите и вари още 30 мин."]],
+ telegrah:["4 порции", "1 ч 30 мин", ["500 г постно телешко", "400 г грах", "1 глава лук", "1 морков", "2 домата", "2 с.л. олио", "копър", "1 ч.л. сол"], ["Запечатай месото с лука в олиото.", "Налей 800 мл вода и вари 1 ч.", "Добави граха, моркова и доматите и вари още 20 мин."]],
+ chushkibyurek:["4 порции (8 бр.)", "40 мин", ["8 печени и обелени чушки", "150 г извара", "60 г сирене, накиснато", "2 яйца", "2 с.л. брашно", "1 с.л. олио"], ["Смеси изварата, сиренето и 1 яйце и напълни чушките.", "Овалай ги в брашно и разбито яйце.", "Нареди в намазана тава и печи 20 мин на 200°C."], "На фурна, а не пържени — така са много по-леки."],
+ svinbulgur:["4 порции", "50 мин", ["500 г свинско филе", "200 г булгур", "1 глава лук", "1 чушка", "2 домата", "2 с.л. олио", "червен пипер, кимион", "1 ч.л. сол"], ["Запечатай месото с лука в олиото.", "Добави чушката, доматите и 700 мл вода и вари 25 мин.", "Добави булгура и вари още 15 мин."]],
+ hek:["2 порции", "35 мин", ["400 г филе хек", "2 картофа", "1 тиквичка", "1 чушка", "1 лимон", "1 с.л. зехтин", "копър, черен пипер", "щипка сол"], ["Нарежи картофите на тънко и ги печи 10 мин на 200°C.", "Добави зеленчуците и рибата отгоре, полей със зехтина и лимона.", "Печи още 20 мин."]],
+ ribnikufteta:["4 порции (12 бр.)", "35 мин", ["500 г бяла риба (филе)", "1 глава лук", "1 яйце", "4 с.л. овесени ядки или галета", "копър, лимонова кора", "1 ч.л. сол"], ["Смели рибата с лука.", "Добави яйцето, овеса и подправките и омеси.", "Оформи кюфтета и ги печи 20 мин на 200°C."]],
+ ribaoriz:["4 порции", "50 мин", ["600 г бяла риба (филе)", "250 г ориз", "1 глава лук", "1 морков", "2 домата", "2 с.л. олио", "лимон, магданоз", "1 ч.л. сол"], ["Задуши лука и моркова в олиото, добави ориза за 2 мин.", "Сипи в тава, налей 700 мл гореща вода и печи 20 мин на 200°C.", "Нареди рибата и доматите отгоре и печи още 15 мин."]],
+ palamud:["2 порции", "35 мин", ["2 пържоли паламуд (~400 г)", "1 лимон", "чесън, магданоз", "1 ч.л. олио", "щипка сол"], ["Подправи рибата и я намажи с олиото.", "Сложи резени лимон и чесън отгоре.", "Печи върху хартия 25 мин на 200°C."]],
+ syomgabrokoli:["1 порция", "25 мин", ["150 г филе сьомга", "200 г броколи", "лимон, чесън", "1 ч.л. зехтин", "щипка сол"], ["Нареди сьомгата и броколите в тава.", "Полей със зехтина, лимона и чесъна.", "Печи 15–18 мин на 200°C."]],
+ skaridizel:["2 порции", "20 мин", ["300 г обелени скариди", "1 тиквичка", "1 чушка", "5–6 чери домата", "3 скилидки чесън", "1 с.л. зехтин", "магданоз, лимон"], ["Задуши чесъна и зеленчуците в зехтина 5 мин.", "Добави скаридите и готви 3–4 мин.", "Полей с лимон и поръси с магданоз."], "Без сол — скаридите обикновено са солени."],
+ ribaton_stek:["1 порция", "10 мин", ["160 г стек риба тон", "1 ч.л. олио", "лимон, черен пипер", "щипка сол"], ["Намажи стека с олиото и пипера.", "Запечи в много горещ тиган по 1–2 мин от страна.", "Полей с лимон."]],
+ byalariba_domat:["4 порции", "35 мин", ["600 г филе бяла риба", "400 г доматено пюре", "1 глава лук", "2 скилидки чесън", "2 с.л. олио", "риган, магданоз", "1 ч.л. сол"], ["Задуши лука и чесъна, добави доматите и вари 10 мин.", "Сложи рибата в соса.", "Готви под капак 10–12 мин или печи 20 мин на 200°C."]],
+ bobmanastir:["4 порции", "2 ч (+ накисване)", ["300 г зрял боб", "2 глави лук", "2 моркова", "1 чушка", "3 домата", "3 с.л. олио", "джоджен, чубрица, червен пипер", "1 ч.л. сол"], ["Свари накиснатия боб до омекване.", "Задуши лука, моркова и чушката в олиото, добави доматите и подправките.", "Смеси с боба в гювеч и печи 30 мин на 200°C."]],
+ leshtaoriz:["4 порции", "45 мин", ["200 г леща", "80 г ориз", "1 глава лук", "1 морков", "2 домата", "2 с.л. олио", "чубрица, червен пипер", "1 ч.л. сол"], ["Свари лещата 15 мин.", "Задуши лука и моркова в олиото, добави доматите.", "Сипи в лещата заедно с ориза и вари 20 мин."]],
+ nahutspanak:["4 порции", "30 мин", ["2 кутии нахут (изплакнат)", "400 г спанак", "1 глава лук", "2 скилидки чесън", "2 домата", "2 с.л. олио", "кимион, червен пипер", "1 ч.л. сол"], ["Задуши лука и чесъна в олиото с подправките.", "Добави доматите, нахута и 300 мл вода и вари 10 мин.", "Добави спанака за 5 мин."]],
+ chervenaleshta:["4 порции", "30 мин", ["250 г червена леща", "2 моркова", "1 глава лук", "2 скилидки чесън", "2 с.л. олио", "кимион, куркума, червен пипер", "лимон", "1 ч.л. сол"], ["Задуши лука, моркова и чесъна с подправките.", "Добави лещата и 900 мл вода и вари 20 мин до гъсто.", "Подкиси с лимон."]],
+ chushkioriz:["4 порции", "1 ч", ["12 чушки", "200 г ориз", "1 глава лук", "1 морков", "2 домата", "2 с.л. олио", "джоджен, червен пипер", "1 ч.л. сол"], ["Задуши лука и моркова, добави ориза, доматите и подправките.", "Напълни чушките и ги нареди в тава.", "Налей вода до половината и печи 45 мин на 200°C."]],
+ tikvichkioriz:["4 порции", "35 мин", ["4 тиквички", "150 г ориз", "1 глава лук", "2 с.л. олио", "копър", "кисело мляко за сервиране", "1 ч.л. сол"], ["Задуши лука в олиото, добави ориза и 500 мл вода и вари 10 мин.", "Добави нарязаните тиквички и вари още 10 мин.", "Поръси с копър и сервирай с кисело мляко."]],
+ lazanya:["6 порции", "1 ч 15 мин", ["250 г кори за лазаня", "500 г пуешка кайма", "1 буркан доматен сос без захар", "1 глава лук", "1 морков", "500 мл прясно мляко + 2 с.л. брашно за соса", "60 г настъргано сирене", "риган, босилек"], ["Задуши лука, моркова и каймата и добави доматения сос.", "Свари рядък сос от млякото и брашното.", "Нареди на пластове кори, кайма и млечен сос и поръси със сиренето.", "Печи 35–40 мин на 190°C."]],
+ pica:["8 парчета", "1 ч 30 мин (с втасване)", ["300 г пълнозърнесто брашно", "7 г мая", "200 мл топла вода", "1 с.л. зехтин", "½ ч.л. сол", "доматен сос без захар", "100 г моцарела", "чушки, гъби, лук, домати, риган"], ["Замеси тестото и го остави да втаса 1 ч.", "Разточи на тънко, намажи с доматения сос.", "Нареди много зеленчуци и малко моцарела.", "Печи 12–15 мин на 230°C."], "Без салам и колбаси отгоре — те са най-солената част."],
+ ovcharska:["1 порция", "10 мин", ["2 домата", "½ краставица", "1 печена чушка", "1 варено яйце", "30 г печено пилешко вместо шунка", "20 г сирене, накиснато", "гъби (по желание)", "1 ч.л. олио, оцет"], ["Нарежи зеленчуците, яйцето и пилешкото.", "Овкуси с олиото и оцета.", "Настържи сиренето отгоре."]],
+ gracka:["1 порция", "7 мин", ["2 домата", "½ краставица", "½ чушка", "¼ червен лук", "30 г сирене, накиснато", "3 маслини", "1 ч.л. зехтин", "риган"], ["Нарежи зеленчуците на едро.", "Сложи сиренето на парче отгоре с маслините.", "Полей със зехтина и поръси с риган."]],
+ kartofenasal:["2 порции", "25 мин", ["500 г картофи", "½ червен лук", "1 с.л. олио", "1 с.л. оцет", "магданоз или копър", "щипка сол"], ["Свари картофите с кората, обели ги и ги нарежи.", "Добави лука, олиото, оцета и магданоза."]],
+ bobsalata:["2 порции", "10 мин", ["1 буркан сварен боб (изплакнат)", "½ червен лук", "магданоз", "1 с.л. олио", "1 с.л. оцет", "червен пипер"], ["Изплакни боба.", "Смеси с лука и магданоза.", "Овкуси с олиото, оцета и червения пипер."]],
+ cezar:["1 порция", "15 мин", ["маруля (~150 г)", "100 г пилешко филе на скара", "1 филия пълнозърнест хляб на крутони", "10 г пармезан", "сос: 2 с.л. кисело мляко, 1 ч.л. горчица, чесън, лимон"], ["Разкъсай марулята и нарежи пилешкото.", "Препечи хляба на кубчета.", "Смеси соса и полей. Поръси с пармезана."]],
+ kyopolu:["4 порции", "40 мин", ["2 патладжана", "2 червени чушки", "2 домата", "2 скилидки чесън", "2 с.л. олио", "1 с.л. оцет", "магданоз", "щипка сол"], ["Изпечи и обели патладжаните и чушките.", "Нарежи ги на ситно с доматите.", "Подправи с чесъна, олиото, оцета и магданоза."]],
+ ruska:["4 порции", "40 мин", ["3 картофа", "2 моркова", "150 г грах", "2 кисели краставички", "2 варени яйца", "100 г шунка от пуешко или печено пилешко", "250 г цедено кисело мляко", "1 с.л. майонеза", "копър"], ["Свари картофите и морковите и ги нарежи на кубчета.", "Добави граха, краставичките, яйцата и месото.", "Смеси с киселото мляко и лъжицата майонеза."], "Киселото мляко вместо майонеза я прави много по-лека."],
+ pyure:["2 порции", "25 мин", ["500 г картофи", "100 г кисело мляко", "50 мл прясно мляко", "1 ч.л. зехтин", "щипка сол"], ["Свари картофите и ги отцеди.", "Намачкай ги с млеката и зехтина."]],
+ pechtikvichki:["2 порции", "25 мин", ["2 тиквички", "1 с.л. зехтин", "чесън, копър"], ["Нарежи тиквичките на кръгчета и ги намажи със зехтина.", "Печи 15–20 мин на 220°C.", "Поръси с чесън и копър."]],
+ sandtun:["1 сандвич", "5 мин", ["2 филии пълнозърнест хляб", "60 г риба тон в собствен сос", "1 с.л. кисело мляко", "краставица, маруля"], ["Смеси рибата с киселото мляко.", "Намажи хляба и добави краставицата и марулята."]],
+ sandmocarela:["1 сандвич", "5 мин", ["2 филии пълнозърнест хляб", "50 г моцарела", "1 домат", "босилек", "капка зехтин"], ["Нареди резени моцарела и домат върху хляба.", "Добави босилек и капка зехтин."]],
+ rolc:["1 брой", "5 мин", ["1 пълнозърнеста тортила", "80 г домашно печено пуешко филе", "маруля, домат, краставица", "2 с.л. кисело мляко с чесън"], ["Намажи тортилата с киселото мляко.", "Нареди месото и зеленчуците и навий плътно."]],
+ kutiaizvara:["1 кутия", "5 мин", ["150 г извара", "2 варени яйца", "моркови, краставици, чушки", "копър, черен пипер"], ["Подправи изварата с копъра и пипера.", "Нарежи яйцата и зеленчуците и ги подреди в кутията."], "Удобна за смяна."],
+ nahutton:["1 порция", "5 мин", ["150 г нахут (изплакнат)", "80 г риба тон в собствен сос", "¼ червен лук", "магданоз", "лимон, 1 ч.л. зехтин"], ["Изплакни нахута.", "Смеси всичко и овкуси с лимона и зехтина."]],
+ tostizvara:["1 порция", "8 мин", ["2 филии пълнозърнест хляб", "80 г извара", "1 домат", "риган, черен пипер"], ["Препечи хляба.", "Намажи с изварата и нареди домата.", "Поръси с риган и пипер."]],
+ salatapile:["1 порция", "7 мин", ["120 г печено пиле без кожата", "маруля, домати, краставица", "1 ч.л. зехтин", "лимон"], ["Обезкости месото и махни кожата.", "Нарежи зеленчуците и смеси с месото.", "Овкуси със зехтина и лимона."]],
+ carevicavarena:["1 кочан", "20 мин", ["1 кочан царевица"], ["Вари 15–20 мин в несолена вода."], "По-добре без сол и масло."],
+ tikvenimafini:["12 броя", "40 мин", ["300 г настъргана тиква", "2 яйца", "100 г захар", "80 мл олио", "250 г брашно", "1 бакпулвер", "канела, джинджифил", "50 г орехи"], ["Разбий яйцата със захарта и олиото, добави тиквата.", "Добави брашното с бакпулвера и подправките, после орехите.", "Разпредели във форми и печи 25 мин на 180°C."]],
+ bananovhlqb:["10 парчета", "1 ч", ["3 зрели банана", "2 яйца", "60 мл олио", "60 г захар", "220 г брашно (може половината пълнозърнесто)", "1 ч.л. сода", "канела, шепа орехи"], ["Смачкай бананите и ги разбъркай с яйцата, олиото и захарта.", "Добави брашното, содата, канелата и орехите.", "Печи във форма за кекс 45–50 мин на 175°C."]],
+ plodovasalata:["1 порция", "7 мин", ["150 г различни плодове", "100 г кисело мляко", "1 ч.л. мед"], ["Нарежи плодовете.", "Полей с киселото мляко и меда."]],
+ nicecream:["1 порция", "5 мин + замразяване", ["1–2 замразени банана на парчета", "2 с.л. прясно мляко", "1 ч.л. какао (по желание)"], ["Пасирай замразения банан с млякото до крем.", "Добави какаото и яж веднага или замрази за 30 мин."]],
+ pechenikrushi:["4 броя", "35 мин", ["4 круши", "4 ч.л. мед", "канела", "шепа орехи"], ["Разполови крушите и махни семките.", "Сложи мед, канела и орехи в средата.", "Печи 25 мин на 180°C."]],
+ chiizkeik:["8 парчета", "1 ч + изстиване", ["500 г извара", "200 г цедено кисело мляко", "3 яйца", "80 г захар", "2 с.л. нишесте", "ванилия, лимонова кора", "основа: 100 г смлени овесени бисквити + 1 с.л. мед"], ["Притисни основата в дъното на форма.", "Пасирай изварата, млякото, яйцата, захарта, нишестето и ванилията.", "Изсипи върху основата и печи 45 мин на 160°C.", "Изстуди в хладилника поне 4 ч."]],
+ jele:["4 порции", "15 мин + стягане", ["500 мл домашен сок без захар (или компот)", "15 г желатин", "200 г плодове"], ["Накисни желатина в малко вода 10 мин.", "Затопли сока и разтвори желатина в него (без да ври).", "Разлей върху плодовете в купички и остави в хладилника да стегне."]],
+ kozunak:["", "", [], [], "Празнично — едно парче, след хранене. Домашният е по-добър от купешкия, който често е с маргарин."],
+ kmmedorehi:["1 порция", "2 мин", ["170 г кисело мляко", "1 с.л. мед", "15 г орехи"], ["Полей киселото мляко с меда.", "Поръси с натрошените орехи."]],
+ pastarma:["", "", [], [], "Много солена — няколко тънки резена (около 30 г), с много пресни зеленчуци и без друго солено мезе в същата чиния."],
+ pulneniyaica:["4 яйца (8 половинки)", "20 мин", ["4 яйца", "2 с.л. цедено кисело мляко", "1 ч.л. горчица", "червен пипер, магданоз"], ["Свари яйцата 10 мин, обели ги и ги разполови.", "Намачкай жълтъците с млякото и горчицата.", "Напълни белтъците и поръси с червен пипер."]],
+ pechenigabi:["2 порции", "20 мин", ["300 г печурки", "2 скилидки чесън", "1 с.л. олио", "магданоз"], ["Нареди гъбите в тава и ги намажи с олиото.", "Печи 15 мин на 200°C.", "Поръси с чесъна и магданоза."]],
+ marinovanigabi:["около 2 буркана", "30 мин + 1 ден", ["1 кг печурки", "200 мл оцет", "400 мл вода", "2 с.л. олио", "1 ч.л. сол", "1 ч.л. захар", "чесън, черен пипер на зърна, дафинов лист"], ["Свари гъбите 10 мин и ги отцеди.", "Свари марината от водата, оцета, олиото и подправките.", "Залей гъбите в буркани и остави 1 ден в хладилника."]],
+ hapkitikvichki:["2 порции", "30 мин", ["2 тиквички", "1 яйце", "2 с.л. брашно", "1 с.л. олио", "сос: 150 г кисело мляко, чесън, копър"], ["Нарежи тиквичките на кръгчета и ги овалай в брашно и разбито яйце.", "Нареди върху хартия, напръскай с олиото и печи 20 мин на 220°C.", "Сервирай със соса от кисело мляко, чесън и копър."]],
+ turshia:['','',[],[],'Много солена — 1 малка чинийка. Изплакни я със студена вода преди ядене, това маха част от солта. В деня на туршията хлябът и сиренето да са по-малко.'],
+ carska:['','',[],[],'Много солена — 1 малка чинийка. Изплакни я със студена вода преди ядене, това маха част от солта. В деня на туршията хлябът и сиренето да са по-малко.'],
+ krastavichki:['','',[],[],'Много солени — 2–3 краставички. Изплакни ги преди ядене и не ги комбинирай със сирене и колбаси в същото хранене.'],
+ kiselozele:['','',[],[],'Солено е. Изплакни го, полей със зехтин и червен пипер. За ястия с кисело зеле — изплакни го добре преди готвене.'],
+ pacha:['6 порции','4–5 ч + изстиване',['2 свински крачета и по-постни части от глава','1 глава чесън','2 моркова','1 глава лук','дафинов лист, черен пипер на зърна','1 ч.л. сол','оцет и червен пипер за сервиране'],['Почисти крачетата и ги вари в много вода 4–5 ч на слаб огън с моркова, лука, дафиновия лист и пипера, като обираш пяната.','Обезкости месото, нарежи го и го разпредели в купички.','Прецеди бульона, добави смачкания чесън и солта и залей месото.','Остави в хладилника да стегне и махни мазнината, събрала се отгоре.'],'Махнатата горна мазнина прави пачата много по-лека. Яде се като самостоятелно ястие, без много хляб.'],
+ shkembe:['4 порции','3 ч',['600 г почистено шкембе','500 мл прясно мляко 1,5%','2 с.л. олио','1 с.л. брашно','червен пипер','1 ч.л. сол','за сервиране: чесън с оцет, люти чушки'],['Свари шкембето в 2 л вода 2–2,5 ч до омекване и го нарежи на ивици.','Затопли олиото, добави брашното и червения пипер за 30 сек и разреди с малко от бульона.','Върни шкембето в бульона заедно със запръжката и млякото и вари 15 мин.','Сервирай с чесън и оцет на масата.'],'Чесънът и оцетът дават вкуса — в чинията не трябва допълнителна сол.'],
+ nadenica:['','',[],[],'Купешката е много солена и мазна. 1 парче (около 120 г), голяма салата или зеленчуци на скара, без пържени картофи. В този ден обядът да е без колбаси.'],
+ karnache:['','',[],[],'Като наденицата — солено и мазно. 1 парче, много зеленчуци, без пържени картофи и без купешка лютеница.'],
+ mesana:['','',[],[],'Най-тежкото от скарата. Ако е мешана — с голяма салата и печени чушки, без пържени картофи, и по-лек обяд в този ден.'],
+ kebapdom:['8 броя','30 мин + 2 ч в хладилника',['500 г кайма (постно свинско и телешко)','1 ч.л. кимион','черен пипер','½ ч.л. сода бикарбонат','½ ч.л. сол','100 мл газирана вода'],['Омеси каймата с подправките, содата и водата и остави 2–3 ч в хладилника.','Оформи 8 кебапчета.','Печи на скара 10–12 мин, като обръщаш.'],'Домашните са с по-малко сол от купешките. 2 броя с голяма салата.'],
+ kufteskara:['8 броя','30 мин + 1 ч в хладилника',['500 г кайма (постно свинско и телешко)','1 глава лук, настърган','1 яйце','кимион, чубрица, черен пипер','½ ч.л. сол'],['Омеси всичко и остави 1 ч в хладилника.','Оформи 8 кюфтета.','Печи на скара по 5–6 мин от страна.']],
+ svinvrat:['1 порция','20 мин + мариноване',['200 г свински врат','1 ч.л. олио','чубрица, черен пипер, сминдух','щипка сол','лук на колелца'],['Мариновай месото с олиото, подправките и лука поне 1 ч.','Печи на силна скара по 5–6 мин от страна.','Махни видимата мазнина преди ядене.'],'Вратът е мазен — бутът и филето са по-добрият избор.'],
+ svinbut:['1 порция','15 мин + мариноване',['180 г свинска пържола от бут или филе','1 ч.л. олио','горчица, чубрица, черен пипер','щипка сол'],['Намажи пържолата с горчицата, олиото и подправките и остави 30 мин.','Печи на скара по 4–5 мин от страна.','Остави 5 мин да си почине преди рязане.']],
+ svinshish:['2 шишчета','30 мин + мариноване',['200 г свинско филе или бут на кубчета','1 чушка','1 глава лук','1 ч.л. олио','червен пипер, кимион, черен пипер','щипка сол'],['Мариновай месото с олиото и подправките поне 1 ч.','Наниж на шишове месо, чушка и лук редом.','Печи на скара 12–15 мин, като обръщаш.']],
+ pileshish:['2 шишчета','25 мин + мариноване',['200 г пилешко филе на кубчета','1 чушка','1 глава червен лук','2 с.л. кисело мляко','1 ч.л. олио','червен пипер, чесън, щипка сол'],['Мариновай месото в киселото мляко, олиото и подправките поне 1 ч.','Наниж го с чушката и лука.','Печи на скара 10–12 мин, като обръщаш.']],
+ pilegardi:['1 порция','15 мин + мариноване',['180 г пилешко филе','1 ч.л. олио','лимон, чесън, риган, черен пипер','щипка сол'],['Разбий леко филето, за да е еднакво дебело.','Мариновай с олиото, лимона и подправките 30 мин.','Печи на скара по 5–6 мин от страна.']],
+ pilebutche:['1 порция','35 мин',['2 пилешки бутчета без кожа','1 ч.л. олио','червен пипер, чубрица, чесън','щипка сол'],['Махни кожата и намажи бутчетата с олиото и подправките.','Печи на по-слаб жар 25–30 мин, като обръщаш, докато соковете станат бистри.']],
+ krilca:['1 порция','30 мин',['5–6 пилешки крилца','1 ч.л. олио','червен пипер, чесън, черен пипер'],['Намажи крилцата с олиото и подправките.','Печи на умерен жар 20–25 мин, като обръщаш.'],'Кожата е мазна — за по-леко махни част от нея.'],
+ telstek:['1 порция','15 мин',['180 г телешко месо (бон филе, рибай или шол)','1 ч.л. олио','черен пипер','щипка сол'],['Извади месото 30 мин преди печене и го намажи с олиото и пипера.','Печи на много силна скара по 3–5 мин от страна според желаната степен.','Посоли накрая и остави 5 мин преди рязане.']],
+ agneshko:['1 порция','15 мин + мариноване',['150 г агнешки котлети','1 ч.л. олио','чесън, джоджен, розмарин','щипка сол'],['Мариновай котлетите с олиото и подправките 1 ч.','Печи на силна скара по 3–4 мин от страна.'],'Агнешкото е мазно — по-рядко и с много зеленчуци.'],
+ skumriaskara:['1 порция','20 мин',['1 скумрия (~250 г цяла)','1 ч.л. олио','лимон','черен пипер, риган','щипка сол'],['Почисти и подсуши рибата и направи 2–3 разреза отстрани.','Намажи я с олиото и подправките.','Печи в решетка за риба по 6–7 мин от страна. Полей с лимон.']],
+ cipura:['1 порция','25 мин',['1 ципура или лаврак (~350 г цяла)','лимон, чесън, магданоз','1 ч.л. олио','щипка сол'],['Почисти рибата и сложи в корема лимон, чесън и магданоз.','Намажи я с олиото.','Печи в решетка за риба по 7–8 мин от страна.']],
+ syomgaskara:['1 порция','12 мин',['150 г филе сьомга с кожата','лимон, копър','щипка сол'],['Подправи филето.','Печи с кожата надолу 5–6 мин и обърни за още 2–3 мин.']],
+ skaridi:['1 порция','10 мин + 15 мин мариноване',['150 г обелени скариди','1 скилидка чесън','1 ч.л. зехтин','лимон, магданоз'],['Мариновай скаридите със зехтина и чесъна 15 мин.','Наниж ги на шишчета и печи по 2 мин от страна.','Полей с лимон и поръси с магданоз.'],'Скаридите от магазина често са солени — без допълнителна сол.'],
+ kalmari:['1 порция','10 мин + 15 мин мариноване',['150 г почистени калмари','1 ч.л. зехтин','чесън, лимон, магданоз'],['Нарежи калмарите на колелца или ги остави цели и ги мариновай 15 мин.','Печи на много силна скара 2–3 мин — повече ги прави жилави.','Полей с лимон и поръси с магданоз.']],
+ zelskara:['2 порции','20 мин',['1 тиквичка','1 патладжан','2 чушки','1 глава червен лук','1 с.л. зехтин','чесън, магданоз, оцет'],['Нарежи зеленчуците на дебели резени.','Намажи ги леко със зехтина.','Печи на скара по 3–4 мин от страна и полей с чесън, оцет и магданоз.']],
+ gubiskara:['1 порция','10 мин',['150 г печурки','1 ч.л. олио','чесън, магданоз'],['Махни дръжките и намажи гъбите с олиото.','Печи по 4–5 мин от страна и поръси с чесън и магданоз.']],
+ kartofiskara:['2 порции','30 мин',['400 г картофи','1 с.л. олио','чубрица, червен пипер'],['Свари картофите 10 мин и ги нарежи на дебели резени.','Намажи ги с олиото и подправките.','Печи на скара по 5 мин от страна.']],
+ carevica:['1 кочан','25 мин',['1 кочан царевица'],['Свари я или я печи направо на скарата 15–20 мин, като я обръщаш.'],'По-добре без сол и без масло — с щипка червен пипер.'],
+ ovkasha:['1 порция','7 мин',['50 г овесени ядки','200 мл прясно мляко 1,5%','½ ябълка, настъргана','10 г орехи (3–4 половинки)','канела'],['Свари овеса в млякото на слаб огън 4–5 мин, като бъркаш.','Добави настърганата ябълка и канелата, разбъркай и махни от огъня.','Поръси с натрошените орехи.']],
+ mishmash:['1 порция','15 мин',['2 яйца','1 червена чушка (печена или прясна)','2 домата','½ глава лук','30 г сирене, накиснато','1 с.л. олио','магданоз'],['Задуши нарязаните лук и чушка в олиото 5 мин.','Добави нарязаните домати и вари 5 мин, докато се сгъсти.','Натроши сиренето, разбий яйцата вътре и бъркай 1–2 мин.','Поръси с магданоз.'],'Без допълнителна сол — сиренето стига.'],
+ omlet:['1 порция','8 мин',['2 яйца','1 шепа пресен или 100 г замразен спанак','1 ч.л. зехтин','черен пипер'],['Задуши спанака в зехтина 2–3 мин.','Разбий яйцата с черен пипер и залей спанака.','Пържи на слаб огън под капак 3–4 мин и сгъни на две.'],'Вместо спанак може гъби, тиквички или чушки.'],
+ panag:['1 порция','10 мин',['2 яйца','200 г кисело мляко','1 скилидка чесън','1 ч.л. зехтин','червен пипер','1 с.л. оцет за водата'],['Разбъркай киселото мляко със смачкания чесън и го сложи в дълбока чиния.','Сложи вода с оцета да ври, намали огъня, пусни яйцата едно по едно и ги свари 3 мин.','Извади ги с решетъчна лъжица върху млякото.','Затопли зехтина 10 сек с червения пипер, без да прегаря, и полей.']],
+ barkani:['1 порция','8 мин',['2 яйца','2 домата','½ глава лук','1 ч.л. зехтин','черен пипер, магданоз'],['Задуши лука в зехтина 3 мин.','Добави нарязаните домати за 3–4 мин.','Разбий яйцата отгоре и бъркай до готовност. Поръси с пипер и магданоз.']],
+ ovpal:['1 порция (6–8 малки)','15 мин',['1 зрял банан','2 яйца','45 г овесени ядки','щипка канела','капка олио за тигана'],['Пасирай всичко в блендер до гладко тесто.','Загрей незалепващ тиган с капка олио и пускай по 2 с.л. тесто.','Печи по 1–2 мин от всяка страна. Сервирай с извара и плод.']],
+ popara:['1 порция','5 мин',['2 филии пълнозърнест хляб (70 г)','200 мл прясно мляко 1,5%','20 г сирене, накиснато'],['Нарежи хляба на кубчета в купа.','Затопли млякото почти до кипване и залей хляба.','Натроши сиренето отгоре.'],'Сладка попара: вместо сирене — лъжичка мед и канела.'],
+ kachamak:['1 порция','20 мин',['75 г царевично брашно','300 мл вода','100 г кисело мляко','30 г сирене, накиснато'],['Сложи водата да заври и сипи брашното на тънка струя, като бъркаш непрекъснато.','Вари на слаб огън 10–15 мин, като бъркаш, докато се сгъсти.','Сипи в чиния, отгоре кисело мляко и натрошено сирене.']],
+ avokado:['1 порция','12 мин',['2 яйца','½ авокадо','1 филия пълнозърнест хляб','1 малък домат','черен пипер, капка лимон'],['Свари яйцата 9 мин и ги обели.','Смачкай авокадото с вилица, лимона и пипера и намажи хляба.','Отгоре нареди резени яйце и домат.']],
+ makizvara:['1 порция','15 мин',['80 г пълнозърнести макарони','100 г извара','1 ч.л. захар или мед','канела'],['Свари макароните според опаковката в почти несолена вода.','Отцеди ги и смеси с натрошената извара.','Поръси със захар и канела.'],'Солен вариант: вместо захар — копър и черен пипер.'],
+ palizvara:['2 палачинки','20 мин',['1 яйце','100 мл прясно мляко','40 г брашно (може пълнозърнесто)','80 г извара','1 с.л. мед','капка олио'],['Разбий яйцето, млякото и брашното до гладко тесто и го остави 10 мин.','Изпечи 2 тънки палачинки в незалепващ тиган с капка олио.','Намажи с изварата, полей с меда и навий.']],
+ kmoves:['1 порция','2 мин',['200 г кисело мляко 2%','30 г овесени ядки','1 малка ябълка или банан','10 г орехи'],['Сложи киселото мляко в купа и добави овеса.','Нарежи плода отгоре и поръси с орехите.'],'Ако овесът престои 10 мин в млякото, става по-мек.'],
+ overnight:['1 порция','3 мин + нощ',['40 г овесени ядки','150 г кисело мляко','100 мл прясно мляко','80 г плод (настъргана ябълка, боровинки)','канела'],['Вечерта смеси всичко в буркан и затвори.','Остави в хладилника за през нощта.','Сутринта разбъркай и яж студено.'],'Идеално за ранно ставане и за носене на работа.'],
+ izvaramed:['1 порция','3 мин',['150 г извара','1 с.л. мед','100 г плод (банан, ябълка, ягоди)'],['Разбъркай изварата с меда до кремообразно.','Нарежи плода отгоре.']],
+ sandizvara:['1 сандвич','3 мин',['2 филии пълнозърнест хляб','60 г извара или леко крема сирене','½ домат','парче краставица','лист маруля'],['Намажи хляба с изварата.','Нареди домата, краставицата и марулята и захлупи.']],
+ hlhumus:['1 порция','3 мин',['2 филии пълнозърнест хляб','60 г хумус','½ червена чушка'],['Намажи хумуса върху хляба.','Отгоре нареди чушката, нарязана на ленти.']],
+ hlfastak:['1 порция','2 мин',['2 филии пълнозърнест хляб','20 г фъстъчено масло без сол и захар','1 банан'],['Намажи фъстъченото масло.','Нареди отгоре резени банан.']],
+ '2yaica':['1 порция','10 мин',['2 яйца','1 домат','1 филия пълнозърнест хляб','черен пипер'],['Свари яйцата 9 мин (може предварително — държат 5 дни в хладилника).','Обели и нарежи с домата, поръси с черен пипер. Сол не е нужна.']],
+ sheik:['1 чаша','2 мин',['1 банан','200 г кисело мляко','2 с.л. овесени ядки','канела'],['Сложи всичко в блендер и пасирай 30 сек.','По желание добави малко мляко за по-рядко.']],
+ protkm:['1 порция','3 мин',['1 мерителна лъжица протеин на прах (~30 г)','200 г кисело мляко','40 г овесени ядки','1 ч.л. какао','1 плод (банан, ябълка или шепа боровинки)'],['Разбъркай протеина с киселото мляко и какаото до гладко — ако е много гъсто, добави 2–3 с.л. вода или мляко.','Добави овеса и нарязания плод.'],'Ако протеинът е подсладен, захар и мед не трябват. Може да се направи и вечерта — сутринта овесът е омекнал.'],
+ muesli:['1 порция','3 мин',['50 г мюсли без добавена захар','200 мл прясно мляко 1,5%'],['Залей мюслито с млякото.','Остави 2–3 мин да омекне.'],'Избирай мюсли с до около 10 г захар на 100 г.'],
+
+ bobchorba:['4 порции','2 ч (+ накисване)',['250 г зрял боб','1 морков','1 глава лук','1 червена чушка','2 домата или 200 г доматено пюре','2 с.л. олио','джоджен, чубрица, червен пипер','1 ч.л. сол'],['Накисни боба от вечерта. Свари го 10 мин и изхвърли водата.','Залей с 2 л прясна вода и вари 1–1,5 ч до омекване.','Задуши нарязаните лук, морков и чушка в олиото 10 мин, добави червения пипер и доматите.','Изсипи в боба и вари още 15 мин. Накрая джоджена, чубрицата и солта.'],'Без наденица и свинско — подправките дават вкуса.'],
+ leshta:['4 порции','40 мин',['250 г леща','1 морков','1 глава лук','2 скилидки чесън','2 домата','2 с.л. олио','чубрица, червен пипер','1 с.л. оцет','1 ч.л. сол'],['Измий лещата и я вари в 1,5 л вода 15 мин.','Задуши лука, моркова и чесъна в олиото 5–7 мин, добави червения пипер и доматите.','Изсипи в лещата и вари още 15–20 мин.','Накрая чубрицата, солта и оцета.']],
+ pilsupa:['4 порции','1 ч',['2 пилешки бутчета без кожа','1 морков','1 малка глава лук','1 картоф','50 г фиде или ориз','магданоз','1 ч.л. сол','по желание: 1 яйце + 1 с.л. кисело мляко за застройка'],['Свари месото в 2 л вода 40 мин, като обираш пяната.','Извади месото, обезкости го и го върни.','Добави нарязаните зеленчуци за 15 мин, после фидето за 5 мин.','Подправи с магданоз и солта. По желание застрой с разбитите яйце и кисело мляко.'],'Без бульонни кубчета — те са пълни със сол.'],
+ pchushki:['4 порции (по 3 чушки)','1 ч 15 мин',['12 чушки за пълнене','400 г пилешка кайма','100 г ориз','1 глава лук','1 морков','2 домата','1 с.л. олио','джоджен, червен пипер','1 ч.л. сол','за заливката: 200 г кисело мляко, 1 яйце'],['Задуши лука и моркова в олиото, добави каймата и я запечатай 5 мин.','Добави ориза, доматите, подправките и 200 мл вода и вари 10 мин.','Напълни чушките, нареди ги в тава и налей вода до половината.','Печи 45 мин на 200°C. Залей с разбитите кисело мляко и яйце и печи още 10 мин.']],
+ sarmi:['4 порции','1 ч 30 мин',['1 средна глава прясно зеле','400 г кайма (пуешка + постна свинска)','100 г ориз','1 глава лук','червен пипер, чубрица, черен пипер','1 ч.л. сол'],['Бланширай листата на зелето във вряща вода 2–3 мин, за да омекнат.','Смеси каймата, ориза, ситно нарязания лук и подправките.','Завий по 1 лъжица плънка във всяко листо.','Нареди в тенджера, залей с вода до покриване, похлупи с чиния и вари 1 ч на слаб огън.'],'С лозови листа от буркан: накисни ги 30 мин и ги изплакни — много са солени.'],
+ guvech:['4 порции','1 ч 30 мин',['500 г пилешко месо без кожа','2 картофа','1 тиквичка','1 патладжан','2 чушки','1 морков','1 глава лук','3 домата','100 г зелен фасул','3 с.л. олио','чубрица, черен пипер','1 ч.л. сол'],['Нарежи месото и зеленчуците на едри кубчета.','Смеси всичко с олиото и подправките в гювеч или тава.','Налей 200 мл вода и покрий с фолио или капак.','Печи 1 ч на 200°C, после още 15 мин без капак.']],
+ musaka:['4 порции','1 ч 15 мин',['500 г пуешка или постна телешка кайма','1 кг картофи','1 глава лук','2 домата','1 с.л. олио','червен пипер, чубрица, черен пипер','1 ч.л. сол','за заливката: 300 г кисело мляко, 2 яйца'],['Задуши лука в олиото, добави каймата и я запечатай. Добави подправките и доматите.','Обели картофите, нарежи ги на кубчета и смеси с каймата в тава.','Налей 300 мл вода и печи 40 мин на 200°C.','Разбий киселото мляко с яйцата, залей и печи още 15 мин до златисто.']],
+ pilezoriz:['4 порции','1 ч 15 мин',['4 пилешки бутчета без кожа (или 600 г филе)','250 г ориз','1 глава лук','1 морков','2 с.л. олио','червен и черен пипер','1 ч.л. сол'],['Свари месото в 1 л вода 30 мин и запази бульона.','Задуши лука и моркова в олиото, добави ориза за 2 мин, после червения пипер.','Сложи ориза в тава, месото отгоре и залей със 750 мл от бульона.','Печи 35–40 мин на 200°C.']],
+ pilekartofi:['4 порции','1 ч 10 мин',['600 г пилешки бутчета без кожа','1 кг картофи','1 глава лук','2 с.л. олио','червен пипер, чубрица, черен пипер','1 ч.л. сол'],['Нарежи картофите на едро и ги смеси с олиото, лука и подправките.','Нареди месото отгоре в тавата.','Налей 150 мл вода и печи 60 мин на 200°C, като обърнеш веднъж.']],
+ pilebulgur:['4 порции','35 мин',['500 г пилешко филе','250 г булгур','1 тиквичка','1 чушка','1 морков','1 глава лук','2 с.л. олио','червен пипер, кимион','1 ч.л. сол'],['Нарежи месото на кубчета и го запечатай в олиото 5 мин.','Добави нарязаните зеленчуци и задуши 5 мин.','Добави булгура и подправките и залей с 600 мл вода.','Вари под капак на слаб огън 15 мин и остави 5 мин да престои.']],
+ pileyahnia:['4 порции','1 ч',['600 г пилешко без кожа','4 картофа','2 моркова','1 глава лук','2 домата','2 с.л. олио','червен пипер, дафинов лист, магданоз','1 ч.л. сол'],['Запечатай нарязаното месо с лука в олиото.','Добави червения пипер, доматите и 800 мл вода и вари 20 мин.','Добави картофите и морковите на кубчета и дафиновия лист и вари още 25 мин.','Накрая магданоза и солта.']],
+ pilezelen:['1 порция','35 мин',['150 г пилешко филе','1 тиквичка','1 чушка','½ глава червен лук','5–6 чери домата','1 с.л. зехтин','риган, черен пипер, щипка сол'],['Нарежи зеленчуците и ги смеси с половината зехтин и подправките.','Намажи филето с останалия зехтин и подправките.','Печи всичко в тава 25 мин на 200°C.']],
+ kavarma:['4 порции','45 мин',['600 г пилешко без кожа','300 г гъби','2 чушки','1 глава лук','2 домата','2 с.л. олио','червен пипер, чубрица','1 ч.л. сол'],['Запечатай нарязаното месо в олиото 5 мин.','Добави лука, чушките и гъбите и задуши 10 мин.','Добави доматите, подправките и малко вода.','Задуши още 15 мин или сипи в гювечета и печи 20 мин на 200°C.']],
+ grah:['4 порции','50 мин',['400 г замразен грах','400 г пилешко месо без кожа','2 картофа','1 морков','1 глава лук','2 домата','2 с.л. олио','копър','1 ч.л. сол'],['Запечатай месото с лука в олиото.','Добави 700 мл вода и вари 20 мин.','Добави картофите, моркова, граха и доматите и вари още 20 мин.','Накрая копъра и солта.']],
+ fasul:['4 порции','40 мин',['800 г зелен фасул','2 картофа','1 глава лук','3 домата','2 скилидки чесън','2 с.л. олио','магданоз, джоджен','1 ч.л. сол'],['Задуши лука и чесъна в олиото 3 мин.','Добави нарязания фасул, картофите и 500 мл вода и вари 20 мин.','Добави доматите и вари още 10 мин.','Накрая магданоза, джоджена и солта.']],
+ spanakoriz:['4 порции','30 мин',['800 г пресен или замразен спанак','150 г ориз','1 глава лук','2 с.л. олио','1 лимон','черен пипер','1 ч.л. сол','кисело мляко за сервиране'],['Задуши лука в олиото, добави ориза и 400 мл вода и вари 10 мин.','Добави спанака и вари още 10 мин, докато оризът омекне.','Подкиси с лимонов сок и подправи. Сервирай с лъжица кисело мляко.']],
+ plakia:['4 порции','45 мин',['800 г филе бяла риба (хек, пангасиус, лаврак)','3 глави лук','3 домата','2 с.л. олио','1 лимон','магданоз, червен пипер, дафинов лист','1 ч.л. сол'],['Задуши нарязания на полумесеци лук в олиото 5 мин и добави червения пипер.','Сложи лука в тава, рибата отгоре, после резени домат и лимон.','Добави дафиновия лист и 100 мл вода.','Печи 25–30 мин на 200°C и поръси с магданоз.']],
+ skumria:['1 порция','30 мин',['1 малка скумрия (~250 г цяла, ~150 г месо)','лимон','черен пипер, риган','щипка сол'],['Почисти рибата и я подсуши.','Подправи отвътре и отвън и сложи резен лимон в корема.','Печи върху хартия за печене 20–25 мин на 200°C.'],'Прясна или замразена — не пушена и не солена.'],
+ safrid:['1 порция','25 мин',['150–200 г сафрид или цаца','1 с.л. брашно (по желание)','1 ч.л. олио','лимон','щипка сол'],['Почисти и подсуши рибата.','Овалай я леко в брашно, нареди върху хартия за печене и напръскай с олиото.','Печи 15–20 мин на 220°C, като обърнеш веднъж. Полей с лимон.']],
+ syomga:['1 порция','20 мин',['150 г филе сьомга','лимон','копър, черен пипер','щипка сол'],['Сложи филето върху хартия за печене.','Подправи с копъра, пипера и резен лимон.','Печи 15 мин на 200°C.']],
+ pastarva:['1 порция','30 мин',['1 пъстърва (~300 г цяла)','2 скилидки чесън','лимон','магданоз','1 ч.л. олио'],['Почисти рибата и сложи в корема чесъна, магданоза и резени лимон.','Намажи я с олиото и я увий в хартия за печене или фолио.','Печи 25 мин на 200°C.']],
+ pilefile:['1 порция','25 мин',['150 г пилешко филе','1 ч.л. олио','червен пипер, чубрица, чесън на прах, черен пипер','щипка сол'],['Разбий леко филето, за да е еднакво дебело.','Намажи го с олиото и подправките.','Печи 20–25 мин на 200°C или в ейрфрайър 15 мин на 190°C.']],
+ svinfile:['1 порция','25 мин',['150 г свинско филе','1 ч.л. олио','1 ч.л. горчица','чубрица, черен пипер','щипка сол'],['Намажи месото с горчицата, олиото и подправките.','Запечатай в сух тиган от всички страни за 3 мин.','Довърши във фурната 15–18 мин на 200°C и остави 5 мин преди рязане.']],
+ kufteta:['4 порции (12 бр.)','30 мин + 30 мин в хладилника',['300 г пуешка кайма','300 г постна телешка кайма','1 глава лук, настъргана','1 яйце','2 с.л. галета или овесени ядки','магданоз, кимион, чубрица, черен пипер','1 ч.л. сол'],['Омеси всичко и остави 30 мин в хладилника.','Оформи 12 кюфтета и ги нареди върху хартия за печене.','Печи 20–25 мин на 210°C, като обърнеш веднъж.']],
+ kebapche:['','',[],[],'Купешки са. За да се вместят: 2 кебапчета, голяма салата (шопска с малко сирене или зелена) и печени чушки вместо пържени картофи. Без купешка лютеница отгоре.'],
+ patatnik:['6 порции','1 ч 15 мин',['1 кг картофи','2 глави лук','2 яйца','100 г сирене, накиснато','2 с.л. олио','джоджен, черен пипер'],['Настържи картофите на едро и ги изцеди от водата.','Смеси ги с настъргания лук, яйцата, натрошеното сирене и подправките.','Изсипи в намазан тиган или тава и притисни.','Печи 50–60 мин на 200°C до златиста коричка.']],
+ banica:['8 порции','1 ч',['400 г кори','3 яйца','300 г кисело мляко','½ ч.л. сода','150 г сирене, накиснато','300 г спанак или настъргана тиква (по желание)','3 с.л. олио'],['Разбий яйцата с киселото мляко и содата, добави сиренето и спанака или тиквата.','Нареди корите в тава, като поръсваш всяка с малко от плънката и капки олио.','Залей отгоре с остатъка от плънката.','Печи 40 мин на 200°C.']],
+
+ kartofi:['2 порции','40 мин',['500 г картофи','1 с.л. олио','чубрица, червен пипер','щипка сол'],['Нарежи картофите на резени или кубчета.','Смеси ги с олиото и подправките.','Печи 35–40 мин на 220°C, като обърнеш веднъж (или 20 мин в ейрфрайър).']],
+ oriz:['2 порции','20 мин',['100 г ориз','200 мл вода'],['Измий ориза.','Сложи го във вряща вода, намали огъня и вари под капак 15 мин.','Остави 5 мин да престои.']],
+ kafoviz:['2 порции','45 мин',['100 г кафяв ориз','250 мл вода'],['Измий ориза.','Вари под капак на слаб огън 30–35 мин.','Остави 10 мин да престои.']],
+ bulgur:['2 порции','15 мин',['100 г булгур','200 мл вода'],['Залей булгура с вряла вода.','Вари 10 мин на слаб огън под капак — или само го покрий и остави 15 мин.']],
+ zadusheni:['1 порция','12 мин',['200 г смесени зеленчуци (броколи, моркови, тиквички, чушки — може замразени)','1 ч.л. зехтин','чесън, черен пипер'],['Задуши зеленчуците с 3–4 с.л. вода под капак 8–10 мин.','Накрая добави зехтина, чесъна и пипера.']],
+ zelemorkov:['2 порции','10 мин',['¼ глава зеле','1 морков','1 с.л. олио','1 с.л. оцет','копър','щипка сол'],['Нарежи зелето на ситно и настържи моркова.','Намачкай ги леко с щипката сол, за да пуснат сок.','Овкуси с олиото, оцета и копъра.']],
+ shopska:['1 порция','7 мин',['2 домата','½ краставица','1 печена или прясна чушка','¼ глава лук','30 г сирене, накиснато','1 ч.л. олио','оцет','магданоз'],['Нарежи зеленчуците.','Овкуси с олиото и оцета — без сол.','Настържи сиренето отгоре и поръси с магданоз.'],'Сиренето се накисва в студена вода за няколко часа — така губи голяма част от солта.'],
+ zelenasal:['1 порция','5 мин',['маруля или домати и краставици (~250 г)','1 ч.л. зехтин','лимон или оцет','копър'],['Нарежи зеленчуците.','Овкуси със зехтина и лимона, без сол.']],
+ pechchushki:['2 порции','45 мин',['6 червени чушки','2 скилидки чесън','1 с.л. олио','1 с.л. оцет','магданоз'],['Изпечи чушките на фурна 25–30 мин на 220°C, докато кожата почернее.','Затвори ги в купа с капак за 10 мин и ги обели.','Нарежи ги и подправи с чесъна, олиото, оцета и магданоза.']],
+
+ tunsalata:['1 порция','5 мин',['1 кутия риба тон в собствен сос (~120 г изцедена)','120 г боб от консерва, изплакнат','2 домата','¼ червен лук','1 с.л. зехтин','лимон, магданоз'],['Изплакни боба под чешмата.','Смеси го с рибата, нарязаните домати и лука.','Овкуси със зехтина, лимона и магданоза — без сол.']],
+ nahut:['1 порция','5 мин',['150 г нахут от консерва, изплакнат','1 краставица','1 домат','магданоз','1 с.л. зехтин','лимон, кимион'],['Изплакни нахута.','Смеси го с нарязаните зеленчуци и магданоза.','Овкуси със зехтина, лимона и щипка кимион.']],
+ snejanka:['2 порции','10 мин',['400 г цедено кисело мляко','2 краставици','2 скилидки чесън','30 г орехи','копър','щипка сол'],['Нарежи краставиците на ситно.','Смеси ги с млякото, смачкания чесън и копъра.','Поръси с натрошените орехи.']],
+ tortila:['1 брой','5 мин',['1 пълнозърнеста тортила','80 г печено пилешко без кожа','маруля, домат','2 с.л. кисело мляко','малко чесън'],['Смеси киселото мляко с малко смачкан чесън.','Намажи тортилата и нареди месото и зеленчуците.','Навий плътно.']],
+ sardini:['1 порция','3 мин',['1 кутия сардини (~90 г изцедени)','1–2 филии пълнозърнест хляб','лимон, лук','голяма салата до тях'],['Изцеди маслото от кутията.','Сервирай върху хляба с лимон и лук, с голяма салата.'],'Най-лесната риба с омега-3 без готвене.'],
+ humuschinia:['1 порция','12 мин',['60 г хумус','½ питка или лаваш','1 морков','½ краставица','½ чушка','2 варени яйца'],['Нарежи зеленчуците на пръчици.','Подреди ги с хумуса, яйцата и питката.']],
+ tabule:['2 порции','20 мин',['120 г булгур','160 г нахут от консерва, изплакнат','2 домата','1 краставица','голяма връзка магданоз','няколко листа джоджен','2 с.л. зехтин','1 лимон'],['Залей булгура с вряла вода (1 към 1,5) и го покрий за 15 мин.','Нарежи ситно зеленчуците и магданоза.','Смеси всичко и овкуси със зехтина и лимона.']],
+ izvarazelen:['1 порция','5 мин',['150 г извара','½ краставица','копър','1 скилидка чесън','2 филии пълнозърнест хляб'],['Нарежи краставицата на ситно.','Смеси я с изварата, копъра и смачкания чесън.','Сервирай с хляба.']],
+ sandyaica:['1 сандвич','12 мин',['2 варени яйца','1 с.л. кисело мляко','1 ч.л. горчица','2 филии пълнозърнест хляб','маруля'],['Намачкай яйцата с киселото мляко и горчицата.','Намажи хляба, сложи марулята и захлупи.']],
+ sandpile:['1 сандвич','3 мин',['2 филии пълнозърнест хляб','70 г печено пилешко филе','домат, краставица, маруля','1 с.л. кисело мляко'],['Намажи хляба с киселото мляко.','Нареди месото и зеленчуците.']],
+ pechenopile:['','',[],[],'Махни кожата — в нея е най-много сол и мазнина. Около 150 г месо, голяма салата и 1 филия хляб.'],
+ cveklo:['2 порции','5 мин',['400 г сварено цвекло (вакуумирано)','30 г орехи','1 скилидка чесън','120 г кисело мляко'],['Настържи или нарежи цвеклото.','Смеси го с млякото, смачкания чесън и натрошените орехи.']],
+ asorti:['1 чиния','5 мин',['шепа ядки (20 г)','30 г сирене, накиснато','1 ябълка','1 морков','1 филия хляб','1 варено яйце'],['Нарежи и подреди в чиния или в кутия.'],'Удобна за кутия за смяна.'],
+
+ zelhumus:['1 порция','5 мин',['100 г моркови, краставици и чушки','50 г хумус'],['Нарежи зеленчуците на пръчици и ги топи в хумуса.'],'Домашен хумус: 1 кутия нахут (изплакнат), 2 с.л. тахан, 1 лимон, 1 скилидка чесън и малко вода — пасирай.'],
+ qbfastak:['1 порция','2 мин',['1 ябълка','1 с.л. фъстъчено масло'],['Нарежи ябълката на резени и ги топи във фъстъченото масло.']],
+ bananorehi:['1 порция','1 мин',['1 банан','15 г орехи'],['Готово — банан и шепа орехи.']],
+ kmplod:['1 порция','2 мин',['150 г кисело мляко','100 г плод'],['Нарежи плода в киселото мляко.']],
+ pechnahut:['4 порции','40 мин',['1 кутия нахут','1 с.л. олио','червен пипер, кимион','щипка сол'],['Изплакни нахута и го подсуши добре.','Смеси го с олиото и подправките.','Печи 30–35 мин на 200°C до хрупкавост, като разклащаш тавата.']],
+ pukanki:['2 порции','7 мин',['50 г царевица за пуканки','1 ч.л. олио','щипка сол или канела'],['Загрей олиото в тенджера с капак и сипи царевицата.','Разклащай, докато пукането спре.','Поръси с щипката сол или с канела.']],
+ orizovki:['1 порция','2 мин',['2 пълнозърнести оризовки','40 г хумус','няколко резена краставица'],['Намажи оризовките с хумуса и сложи краставицата отгоре.']],
+ yaicedomat:['1 порция','10 мин',['1 яйце','1 домат','черен пипер'],['Свари яйцето 9 мин, обели го и го нарежи с домата.']],
+ krushasirene:['1 порция','2 мин',['1 круша','25 г сирене, накиснато'],['Нарежи крушата и сиренето.']],
+ kaisii:['1 порция','1 мин',['30 г сушени кайсии','10 г бадеми'],['Готово — кайсии с няколко бадема.']],
+
+ pechqbalka:['4 броя','35 мин',['4 ябълки','4 ч.л. мед','30 г орехи','канела'],['Издълбай семките отгоре, без да пробиваш дъното.','Напълни с орехите, меда и канелата.','Печи 25–30 мин на 180°C с малко вода в тавата.'],'Стоят 3 дни в хладилника.'],
+ bisk:['около 12 броя','25 мин',['2 зрели банана','150 г овесени ядки','30 г орехи','30 г стафиди или капки черен шоколад','канела'],['Смачкай бананите и ги смеси с всичко останало.','Оформи с лъжица 12 купчинки върху хартия за печене и леко ги сплескай.','Печи 15 мин на 180°C.'],'Без захар и без масло.'],
+ musk:['1 порция','3 мин',['200 г цедено кисело мляко','1 с.л. какао','1 с.л. мед'],['Разбъркай добре до гладък крем.','Отгоре сложи резени банан или настърган черен шоколад.']],
+ kmmed:['1 порция','2 мин',['150 г кисело мляко','1 с.л. мед','шепа боровинки (пресни или размразени)'],['Смеси млякото с меда и поръси с боровинките.']],
+ shokolad:['','',[],[],'3 квадратчета (около 20 г) черен шоколад 70% или повече. Яде се бавно, след хранене.'],
+ furmi:['1 порция','2 мин',['3 фурми','3 половинки орехи'],['Махни костилките и сложи по половинка орех във всяка фурма.']],
+ tahan:['1 порция','1 мин',['1 с.л. тахан','1 с.л. мед'],['Разбъркай ги и яж с лъжица или с малко парче хляб.']],
+ halva:['','',[],[],'Парче колкото кибритена кутия (около 30 г). Тахан халвата е по-добра от слънчогледовата.'],
+ mlqkooriz:['4 порции','45 мин',['100 г ориз','1 л прясно мляко 1,5%','50 г захар','канела','кора от лимон'],['Свари ориза в 200 мл вода 5 мин.','Добави млякото и лимоновата кора и вари на слаб огън 30 мин, като бъркаш често.','Добави захарта и вари още 5 мин.','Разсипи в купички и поръси с канела.']],
+ tikvenik:['8 парчета','1 ч',['400 г кори','800 г тиква, настъргана','100 г орехи','80 г захар','2 ч.л. канела','4 с.л. олио'],['Смеси тиквата, орехите, захарта и канелата.','Поръси всяка кора с плънка и капки олио и я навий на руло.','Нареди рулата в тава и ги намажи отгоре с олио.','Печи 35–40 мин на 180°C.']],
+ keks:['12 парчета','1 ч',['3 яйца','120 г захар','120 мл олио','200 мл кисело мляко','300 г брашно','1 бакпулвер','ванилия','1 с.л. какао (за мраморен кекс)'],['Разбий яйцата със захарта и добави олиото и млякото.','Добави брашното с бакпулвера и ванилията.','За мраморен кекс оцвети една трета от тестото с какаото и го разпредели на ивици.','Печи в намазана форма 40–45 мин на 175°C.']],
+ palmed:['2 палачинки','20 мин',['1 яйце','100 мл прясно мляко','40 г брашно','1 с.л. мед или сладко','капка олио'],['Разбий яйцето, млякото и брашното и остави тестото 10 мин.','Изпечи 2 тънки палачинки в незалепващ тиган с капка олио.','Намажи с меда или сладкото и навий.']],
+ sladoled:['','',[],[],'1–2 топки (около 80 г), след хранене. По-добре млечен или плодов, без глазура и без бисквитена фунийка.'],
+ kremkaramel:['6 броя','1 ч + изстиване',['500 мл прясно мляко','4 яйца','80 г захар + 60 г за карамела','ванилия'],['Разтопи 60 г захар в тиган до карамел и го разлей в 6 формички.','Разбий яйцата със захарта и ванилията и добави топлото мляко.','Разлей в формичките и ги сложи в тава с вода.','Печи 40–45 мин на 160°C, изстуди и обърни.']],
+ sladkabanica:['8 парчета','1 ч',['400 г кори','700 г настъргани ябълки или тиква','80 г захар','80 г орехи','канела','4 с.л. олио'],['Смеси плодовете със захарта, орехите и канелата.','Нареди корите в тава с плънка и капки олио между тях.','Печи 35–40 мин на 180°C.']],
+
+ sudzhuk:['','',[],[],'Няколко тънки резена (50–70 г) — нарязан на тънко изглежда повече. До него: шопска с малко сирене, печени чушки, краставици и 1 филия хляб. В деня на мезето обядът е без колбаси и по-малко солен.'],
+ lukanka:['','',[],[],'30–40 г, нарязана на тънко, с много пресни зеленчуци. Без кашкавал и туршия в същата чиния.'],
+ lutenica:['около 6 буркана','3 ч',['5 кг червени чушки','2 кг домати','1 кг патладжан','1 глава чесън','150 мл олио','2 с.л. захар','2 ч.л. сол'],['Изпечи и обели чушките и патладжаните.','Обели доматите и ги свари до сгъстяване.','Смели чушките и патладжаните и ги смеси с доматите.','Вари на слаб огън 1–2 ч, като бъркаш, докато се сгъсти. Накрая добави олиото, чесъна, захарта и солта.','Напълни горещи буркани и ги стерилизирай 10 мин.'],'В нея солта е по-малко, отколкото в купешката.']
+};
+/* ---------- Правила и съвети ---------- */
+const RULES = [
+ {t:'Най-важните 7 правила', open:true, h:`<ol>
+  <li><b>Солта е врагът номер едно.</b> До около 5 г сол на ден общо (1 чаена лъжичка) — включително солта в хляба, сиренето и колбасите. Най-много сол идва от хляб, сирене, кашкавал, колбаси, туршии и готови храни, не от солницата.</li>
+  <li><b>Чинията:</b> половината зеленчуци, една четвърт белтък (риба, пиле, яйца, боб, извара), една четвърт въглехидрати (пълнозърнест хляб, ориз, булгур, картофи).</li>
+  <li><b>Риба поне 2 пъти седмично</b> — скумрия, сафрид, цаца, сьомга, пъстърва. Прясна или замразена, печена — не осолена и не пушена.</li>
+  <li><b>Бобови 2–3 пъти седмично</b> — боб, леща, нахут, грах.</li>
+  <li><b>Пълнозърнесто</b> — пълнозърнест или ръжен хляб, овесени ядки, булгур, кафяв ориз. Хляб 2–4 филии на ден.</li>
+  <li><b>Шепа несолени ядки на ден</b> — орехи, бадеми, лешници.</li>
+  <li><b>Последното по-сериозно хранене е 2–3 часа преди сън</b> — заради сънната апнея и киселините.</li>
+ </ol>`},
+ {t:'Кога се яде при смени 2/2/2', h:`<p>Първо хранене до 30–60 мин след ставане, после на всеки 3–4 часа. Нищо тежко 2–3 часа преди сън. Сънят не е разписан — важното е да са поне 7 часа, а храненията се местят спрямо ставането.</p>
+ <ul>
+  <li><b>Дневна смяна:</b> закуска преди работа, снакс, обяд, снакс, вечеря вкъщи (умерена), след нея само чай или плод.</li>
+  <li><b>Нощна смяна:</b> голямото топло хранене е <b>преди</b> смяната; в полунощ средно хранене; между 2 и 5 ч само нещо леко; сутрин лека закуска преди сън.</li>
+  <li><b>Почивни дни:</b> нормален ритъм; добър ден за сготвяне на тенджера и разсипване в кутии за следващите смени.</li>
+ </ul>
+ <p>При 10 000 крачки и 12 часа на крака порциите не трябва да са мизерни — глад до треперене води до преяждане вечерта.</p>`},
+ {t:'Нощна смяна: чантата', h:`<p>През нощта тялото смила най-зле и тежката храна в 3 часа тежи и разваля съня след това. Ритъмът е: голямо преди, средно в полунощ, малко към сутринта.</p>
+ <ul>
+  <li>1 кутия с основното хранене (или сандвич + буркан таратор или салата)</li>
+  <li>1–2 плода и нарязани моркови или чушки</li>
+  <li>1 кисело мляко или айрян</li>
+  <li>пликче с шепа ядки</li>
+  <li>порцията сладко за деня — да не се купува от автомата</li>
+  <li>термос с чай (мента, лайка, матинка) и бутилка вода</li>
+ </ul>
+ <p>Кафето на нощна смяна е само в първата половина (до около 1–2 ч), иначе след смяната сънят е лош.</p>`},
+ {t:'Сладкото', h:`<p>Сладко има всеки ден — една порция, след хранене, не на гладно и не пред телевизора от пакета. Когато сладкото е позволено, няма сривания.</p>
+ <ul>
+  <li><b>Всеки ден (едно от тях):</b> черен шоколад 70%+, печена ябълка, кисело мляко с мед, фурми с орехи, овесени бисквитки, мус с какао, тахан с мед, парче халва, мляко с ориз.</li>
+  <li><b>1–2 пъти седмично:</b> тиквеник, кекс, сладолед, палачинки, крем карамел, сладка баница.</li>
+  <li><b>Рядко (празник):</b> торта със сметана, баклава, вафли и пакетирани бисквити, кроасани, понички и мекици.</li>
+ </ul>`},
+ {t:'Когато гладът удари', h:`<p>След нощна смяна и при недоспиване гладът е по-силен — това е нормално и не е липса на воля.</p>
+ <ul>
+  <li><b>Първо чаша вода или чай, после 10 минути.</b> Ако и тогава е гладен — яде спокойно нещо от снаксовете.</li>
+  <li><b>Белтък във всяко хранене</b> — яйце, кисело мляко, извара, месо, риба, боб.</li>
+  <li><b>Супа или салата първо</b>, основното след това.</li>
+  <li><b>Яде се бавно, 15–20 минути</b>, седнал и от чиния. Сигналът „сит съм“ идва след около 20 мин.</li>
+  <li><b>Нарязани зеленчуци на първия рафт в хладилника</b> — което се вижда първо, това се яде.</li>
+  <li><b>Не се пазарува гладен</b> — и не се минава покрай бензиностанцията на връщане от нощна.</li>
+  <li><b>Вечерен глад след вечеря</b> — чай, кисело мляко или ябълка, не сандвич с кашкавал в 23 часа.</li>
+  <li><b>Глад в 3–4 часа сутринта</b> често е умора: 5 минути разходка, студена вода на лицето, чай — после решава.</li>
+  <li><b>Не се пропускат хранения „за да се слабее“</b> — пропуснатата закуска се връща двойно вечерта.</li>
+  <li><b>Преяждане се случва — и това е ОК.</b> Следващото хранене е нормално, без „наказание“ с гладуване.</li>
+ </ul>`},
+ {t:'Сол и мазнини: какво с какво да се замени', h:`<p>По-малкото сол вали кръвното. Вкусът се привиква за 2–3 седмици — след това старата храна се струва прекалено солена.</p>
+ <table class="swap"><thead><tr><th>Вместо</th><th>По-добре</th></tr></thead><tbody>
+  <tr><td>Сирене направо от опаковката</td><td>Накиснато в студена вода за няколко часа; по-малко; извара</td></tr>
+  <tr><td>Кашкавал всеки ден</td><td>Моцарела или извара; кашкавал — тънко рендосан</td></tr>
+  <tr><td>Луканка, салам, шунка, наденица</td><td>Печено пилешко или свинско филе за сандвичи; яйца; риба тон</td></tr>
+  <tr><td>Туршия, кисели краставички, маслини</td><td>Прясна салата с оцет и чесън; печени чушки; 4–5 маслини</td></tr>
+  <tr><td>Лютеница от магазина</td><td>Домашна или 1–2 лъжици</td></tr>
+  <tr><td>Бульонни кубчета, вегета, шарена сол</td><td>Чубрица, джоджен, риган, кимион, чесън, лук, пипер, лимон, оцет</td></tr>
+  <tr><td>Бял хляб без мярка</td><td>Пълнозърнест или ръжен, 2–4 филии на ден</td></tr>
+  <tr><td>Пържено в много олио</td><td>На фурна, в ейрфрайър, задушено, на скара</td></tr>
+  <tr><td>Масло, свинска мас, маргарин</td><td>Зехтин или олио, отмерено с лъжица</td></tr>
+  <tr><td>Сметана, майонеза</td><td>Цедено кисело мляко</td></tr>
+  <tr><td>Тлъста кайма, свински врат и ребра</td><td>Пилешко и пуешко без кожа, свинско филе, постна телешка, риба</td></tr>
+  <tr><td>Пици, дюнери, бургери</td><td>Домашен сандвич или тортила; ако се поръчва — веднъж седмично, със салата</td></tr>
+ </tbody></table>
+ <p><b>Етикетът за сол</b> (на 100 г): до 0,3 г е малко, над 1,5 г е много.</p>`},
+ {t:'Суджукът и вечерното мезе', h:`<p>Домашният суджук и мезето вечер си остават. Трикът е останалото в чинията и през деня да е по-леко, за да се побере.</p>
+ <ul>
+  <li><b>Порцията:</b> няколко тънки резена (около 50–70 г).</li>
+  <li><b>Мезето е самата вечеря</b>, не добавка към нея: суджук + голяма салата или нарязани зеленчуци + филия хляб.</li>
+  <li><b>До суджука — пресни неща:</b> шопска с малко сирене, домати, краставици, печени чушки, репички, „Снежанка“. Без туршия, кашкавал и луканка в същата чиния.</li>
+  <li><b>В деня на мезето обядът е по-малко солен</b> — чорба, яхния или пиле, без колбаси и с по-малко хляб.</li>
+  <li><b>Не много късно</b> — 2–3 часа преди сън.</li>
+  <li><b>При правенето:</b> солта по рецептата не се увеличава; може и малко по-малко, но не много — солта е част от безопасното сушене.</li>
+ </ul>`},
+ {t:'Скарата', h:`<ul>
+  <li><b>Най-добрият избор:</b> пилешко филе и шишчета, свински бут или филе, телешки стек, риба, скариди, калмари.</li>
+  <li><b>По-рядко и по едно парче:</b> наденица, карначе, кебапчета, свински врат, крилца, мешана скара — те са най-солени и мазни.</li>
+  <li><b>Мариновай без много сол:</b> олио, лимон, чесън, чубрица, кимион, червен пипер, кисело мляко за пилешкото.</li>
+  <li><b>Половината скара да е зеленчуци:</b> тиквички, патладжан, чушки, гъби, лук.</li>
+  <li><b>Не изгаряй месото</b> и махай видимата мазнина преди ядене.</li>
+  <li><b>До скарата:</b> голяма салата и печени чушки вместо пържени картофи; хляб — 1 филия.</li>
+ </ul>`},
+ {t:'Кафе, алкохол и вода', h:`<ul>
+  <li><b>Кафе:</b> 1–2 чаши на ден. Последното — поне 6 часа преди сън (на дневна до 14 ч, на нощна до 1–2 ч).</li>
+  <li><b>Алкохол:</b> най-добре никакъв или спорадично едно питие. Вдига кръвното и влошава сънната апнея — никога вечерта преди сън.</li>
+  <li><b>Енергийни напитки и женско биле</b> (сладкиши и чай с биле) — по-добре не, и двете вдигат кръвното.</li>
+  <li><b>Вода — 3 литра на ден:</b> чаша след ставане, бутилка 1,5 л за смяната, останалото вкъщи; по-малко в последния час преди сън.</li>
+ </ul>`},
+ {t:'Сънна апнея и храна', h:`<ul>
+  <li>Ако има наднормено тегло, дори 5–10% по-малко килограми обикновено намаляват апнеята и кръвното. Бавно, без гладуване.</li>
+  <li>Без алкохол поне 3–4 часа преди сън.</li>
+  <li>Без тежко хранене 2–3 часа преди сън.</li>
+  <li>Апаратът (CPAP), ако има такъв, се ползва винаги — и при дневния сън след нощна.</li>
+  <li>Сън на страна, не по гръб.</li>
+ </ul>
+ <p>Недоспиването увеличава глада и желанието за сладко — сънят също е част от режима.</p>`},
+ {t:'Пазарен списък', h:`<ul>
+  <li><b>Зеленчуци:</b> домати, краставици, чушки, моркови, зеле, лук, чесън, тиквички, спанак, маруля, картофи, цвекло, магданоз, копър, гъби; замразени зеленчуци.</li>
+  <li><b>Плодове:</b> ябълки, банани, портокали, мандарини, круши, лимони, сезонни; замразени боровинки.</li>
+  <li><b>Белтъчни:</b> пилешко филе и бутчета без кожа, пуешка кайма, свинско филе, яйца, скумрия, сафрид, сьомга.</li>
+  <li><b>Млечни:</b> кисело мляко 2%, цедено кисело мляко, прясно мляко 1,5%, извара, малко сирене.</li>
+  <li><b>Зърнени:</b> пълнозърнест или ръжен хляб, овесени ядки, булгур, ориз, кус-кус, пълнозърнести макарони и тортили.</li>
+  <li><b>Бобови и консерви:</b> боб, леща, нахут, риба тон в собствен сос, сардини, домати без сол, хумус.</li>
+  <li><b>Мазнини и ядки:</b> зехтин, олио, несолени орехи и бадеми, фъстъчено масло без сол, тахан.</li>
+  <li><b>Подправки:</b> чубрица, джоджен, червен и черен пипер, кимион, риган, сминдух, дафинов лист, канела, оцет.</li>
+  <li><b>Сладко:</b> черен шоколад 70%+, мед, фурми, сушени кайсии, какао, халва.</li>
+ </ul>`}
+];
+/* ---------- Данни и запазване ---------- */
+const KEY = 'hranene-dnevnik-v1';
+function normalize(d){
+  d = d && typeof d==='object' ? d : {};
+  d.settings = Object.assign({sex:'m',age:55,height:175,weight:85,act:1.55,goal:0,manual:'',pp:20,cp:50,fp:30,salt:5,saved:false}, d.settings||{});
+  d.days = d.days || {};
+  d.custom = Array.isArray(d.custom) ? d.custom : [];
+  d.favs = Array.isArray(d.favs) ? d.favs : [];
+  d.lastType = d.lastType || 'day';
+  return d;
+}
+function load(){ try{ const s = localStorage.getItem(KEY); if(s) return normalize(JSON.parse(s)); }catch(e){} return normalize({}); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){} }
+let data = load();
+
+let FOOD = {};
+function toFood(r){ const fl = r[9]||''; return {id:r[0],name:r[1],cat:r[2],k:r[3],p:r[4],c:r[5],f:r[6],s:r[7],por:r[8],S:fl.includes('S'),G:fl.includes('G'),V:fl.includes('V'),L:fl.includes('L'),N:fl.includes('N'),D:fl.includes('D'),X:fl.includes('X')}; }
+function buildFoods(){
+  FOOD = {};
+  RAW.forEach(r=>{ FOOD[r[0]] = toFood(r); });
+  data.custom.forEach(c=>{ FOOD[c.id] = Object.assign({S:false,G:false,V:false,L:false,N:true,custom:true}, c); });
+}
+buildFoods();
+const allFoods = ()=>Object.values(FOOD);
+
+/* ---------- Сметки ---------- */
+const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+function nut(f,g){ const m=g/100; return {k:f.k*m,p:f.p*m,c:f.c*m,f:f.f*m,s:f.s*m}; }
+function sumEntries(list){
+  const t={k:0,p:0,c:0,f:0,s:0};
+  (list||[]).forEach(e=>{ const f=FOOD[e.id]; if(!f) return; const n=nut(f,e.g); for(const k in t) t[k]+=n[k]; });
+  return t;
+}
+function dayTotals(day){
+  const t={k:0,p:0,c:0,f:0,s:0};
+  Object.values(day.slots).forEach(l=>{ const n=sumEntries(l); for(const k in t) t[k]+=n[k]; });
+  return t;
+}
+function targets(){
+  const s=data.settings; let k; const m=parseFloat(s.manual);
+  if(m>0) k=m;
+  else { const bmr = 10*s.weight + 6.25*s.height - 5*s.age + (s.sex==='m'?5:-161); k = bmr*Number(s.act) + Number(s.goal); }
+  k = Math.round(k/10)*10;
+  const sum = (Number(s.pp)+Number(s.cp)+Number(s.fp)) || 100;
+  return {k, p:k*s.pp/sum/4, c:k*s.cp/sum/4, f:k*s.fp/sum/9, s:Number(s.salt)};
+}
+function roundG(g){ if(g>=100) return Math.round(g/10)*10; return Math.max(5, Math.round(g/5)*5); }
+function hashRand(str){ let h=2166136261; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return ((h>>>0)%10000)/10000; }
+
+function context(day){
+  const T=targets(), tot=dayTotals(day), type=TYPES[day.type];
+  const empty = type.slots.filter(s=>!(day.slots[s.id]||[]).length);
+  const share = empty.reduce((a,s)=>a+s.share,0) || 1;
+  const rem = {k:Math.max(T.k-tot.k,0), p:Math.max(T.p-tot.p,0), c:Math.max(T.c-tot.c,0), f:Math.max(T.f-tot.f,0), s:Math.max(T.s-tot.s,0)};
+  return {T, tot, empty, rem, tgt(sl){ const fr=sl.share/share; return {k:rem.k*fr,p:rem.p*fr,c:rem.c*fr,f:rem.f*fr,s:Math.max(rem.s*fr,0.3)}; }};
+}
+
+function templatesFor(sl){
+  const foods = allFoods().filter(f=>sl.cats.includes(f.cat) && !f.N && !f.X);
+  const sides = allFoods().filter(f=>f.G && !f.X);
+  const salads = allFoods().filter(f=>f.V && !f.X);
+  const out=[];
+  foods.forEach(f=>{
+    if(f.S) sides.forEach(g=>out.push([f,g]));
+    else if(f.cat==='mez') salads.forEach(v=>out.push([f,v,FOOD.hlqb]));
+    else out.push([f]);
+  });
+  return out;
+}
+function fit(tpl, tgt, sl){
+  const sc = sl.clamp || [.6,1.5];
+  const main = tpl[0];
+  const lo = main.L ? Math.max(.8,sc[0]) : sc[0], hi = main.L ? Math.min(1.2,sc[1]) : sc[1];
+  const mainBase = main.k*main.por/100;
+  const want = Math.max(tgt.k, 40);
+  if(tpl.length===1) return [{id:main.id, g:roundG(main.por*clamp(want/mainBase,lo,hi))}];
+  const allBase = tpl.reduce((a,f)=>a+f.k*f.por/100,0);
+  const mf = clamp(want/allBase, lo, hi);
+  const mk = mainBase*mf;
+  const restBase = allBase - mainBase;
+  const rf = clamp((want-mk)/restBase, .4, 1.8);
+  return [{id:main.id,g:roundG(main.por*mf)}].concat(tpl.slice(1).map(f=>({id:f.id,g:roundG(f.por*rf)})));
+}
+function scoreOf(entries, tgt, eaten, seed){
+  const t=sumEntries(entries);
+  let e = 1.5*Math.abs(t.k-tgt.k)/Math.max(tgt.k,80)
+        + 1.0*Math.abs(t.p-tgt.p)/Math.max(tgt.p,10)
+        + 0.5*Math.abs(t.c-tgt.c)/Math.max(tgt.c,15)
+        + 0.7*Math.abs(t.f-tgt.f)/Math.max(tgt.f,8);
+  if(t.s>tgt.s) e += (t.s-tgt.s)*1.2;
+  if(eaten.has(entries[0].id)) e += .35;
+  e += hashRand(entries.map(x=>x.id).join('|')+'#'+seed)*.35;
+  return e;
+}
+function suggest(sl, tgt, day, seed){
+  const eaten = new Set();
+  Object.values(day.slots).forEach(l=>l.forEach(e=>eaten.add(e.id)));
+  const scored = templatesFor(sl).map(tpl=>{ const entries=fit(tpl,tgt,sl); return {entries, e:scoreOf(entries,tgt,eaten,cur+':'+seed)}; });
+  scored.sort((a,b)=>a.e-b.e);
+  const picks=[], used=new Set();
+  for(const s of scored){ const m=s.entries[0].id; if(used.has(m)) continue; used.add(m); picks.push(s); if(picks.length===3) break; }
+  return picks;
+}
+
+/* ---------- Дати ---------- */
+function keyOf(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function parseKey(k){ const a=k.split('-').map(Number); return new Date(a[0],a[1]-1,a[2]); }
+function shiftKey(k,n){ const d=parseKey(k); d.setDate(d.getDate()+n); return keyOf(d); }
+const TODAY = keyOf(new Date());
+let cur = TODAY;
+function getDay(k){ return data.days[k] || {type:data.lastType, slots:{}}; }
+function ensureDay(k){ if(!data.days[k]) data.days[k]={type:data.lastType, slots:{}}; return data.days[k]; }
+
+/* ---------- Изглед ---------- */
+const $ = id=>document.getElementById(id);
+const esc = s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n=>Math.round(n).toLocaleString('bg-BG');
+const r0 = n=>Math.round(n);
+const s1 = n=>(Math.round(n*10)/10).toFixed(1).replace('.',',');
+const pct = (a,b)=>b>0?clamp(a/b*100,0,100):0;
+const hasRec = id=>!!REC[id];
+const unit = f=>f && f.D ? 'мл' : 'г';
+const WARN = 'Не препоръчвам, шефе';
+const isFav = id=>data.favs.includes(id);
+const starBtn = id=>`<button type="button" class="star ${isFav(id)?'on':''}" data-act="fav" data-id="${esc(id)}" aria-pressed="${isFav(id)}" aria-label="${isFav(id)?'Махни от любими':'Добави в любими'}">${isFav(id)?'★':'☆'}</button>`;
+function toggleFav(id){ data.favs = isFav(id) ? data.favs.filter(x=>x!==id) : data.favs.concat([id]); save(); }
+const warnTag = f=>f && f.X ? `<span class="warn-tag">${WARN}</span>` : '';
+const seeds = {};
+let lastPicks = {};
+let view = 'dnevnik';
+
+function nameBtn(f){
+  return hasRec(f.id)
+    ? `<button type="button" class="namebtn has-rec" data-act="recipe" data-id="${esc(f.id)}">${esc(f.name)}</button>`
+    : `<span class="namebtn">${esc(f.name)}</span>`;
+}
+
+function render(){
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.view===view)));
+  ['dnevnik','recepti','pravila'].forEach(v=>{ $('view-'+v).hidden = v!==view; });
+  if(view==='dnevnik') renderLog();
+  else if(view==='recepti') renderRecipes();
+  else renderRules();
+}
+
+function renderLog(){
+  const day = getDay(cur);
+  const d = parseKey(cur);
+  let lbl = d.toLocaleDateString('bg-BG',{weekday:'short',day:'numeric',month:'long'});
+  if(cur===TODAY) lbl = 'Днес, '+lbl; else if(cur===shiftKey(TODAY,-1)) lbl='Вчера, '+lbl;
+  $('dateLabel').textContent = lbl;
+  $('typeSeg').innerHTML = Object.entries(TYPES).map(([k,t])=>`<button data-act="type" data-type="${k}" aria-pressed="${day.type===k}">${t.label}</button>`).join('');
+  $('typeTip').textContent = TYPES[day.type].tip;
+  $('banner').innerHTML = data.settings.saved ? '' : `<div class="banner"><span>Целта е сметната за примерни данни (мъж, 55 г., 175 см, 85 кг). Въведи истинските в Настройки.</span><button data-act="settings">Въведи</button></div>`;
+
+  const ctx = context(day);
+  const T=ctx.T, t=ctx.tot, left=T.k-t.k;
+  const macro = (cls,label,v,tg,isSalt)=>{
+    const over = v>tg*1.1; const state = isSalt ? (v>tg?'bad':'') : (over?'warn':'');
+    const val = isSalt ? `${s1(v)} / ${s1(tg)} г` : `${r0(v)} / ${r0(tg)} г`;
+    return `<div class="macro ${cls} ${state}"><div class="mrow"><span>${label}</span><span>${val}</span></div><div class="bar"><span style="width:${pct(v,tg)}%"></span></div></div>`;
+  };
+  const remSlots = ctx.empty.map(s=>s.name.toLowerCase());
+  $('summary').innerHTML = `
+    <div class="sum-top">
+      <div><div class="big ${left<0?'over':''}">${left>=0?fmt(left):'+'+fmt(-left)}</div><div class="big-cap">${left>=0?'ккал остават за деня':'ккал над целта'}</div></div>
+      <div class="sum-side">изядени <b>${fmt(t.k)}</b><br>цел <b>${fmt(T.k)}</b> ккал</div>
+    </div>
+    <div class="bar ${left<0?'over':''}"><span style="width:${pct(t.k,T.k)}%"></span></div>
+    <div class="macros">${macro('prot','Белтъчини',t.p,T.p)}${macro('carb','Въглехидрати',t.c,T.c)}${macro('fat','Мазнини',t.f,T.f)}${macro('salt','Сол',t.s,T.s,true)}</div>
+    ${remSlots.length && left>0 ? `<p class="remain">Остатъкът се разпределя за: ${esc(remSlots.join(', '))}.</p>` : ''}`;
+
+  lastPicks = {};
+  const typeSlots = TYPES[day.type].slots;
+  const ids = new Set(typeSlots.map(s=>s.id));
+  let html = typeSlots.map(sl=>slotHTML(sl, day, ctx, false)).join('');
+  Object.keys(day.slots).filter(id=>!ids.has(id) && day.slots[id].length).forEach(id=>{
+    html += slotHTML({id, name:(SLOTNAME[id]||'Друго'), time:'от друг тип ден', share:0, cats:[]}, day, ctx, true);
+  });
+  $('slots').innerHTML = html;
+}
+
+function slotHTML(sl, day, ctx, orphan){
+  const list = day.slots[sl.id] || [];
+  const tot = sumEntries(list);
+  let body, kTxt;
+  if(list.length){
+    body = '<ul class="items">'+list.map((e,i)=>itemHTML(sl.id,e,i)).join('')+'</ul>';
+    kTxt = `${fmt(tot.k)} ккал`;
+  } else {
+    const tgt = ctx.tgt(sl);
+    kTxt = `~${fmt(tgt.k)} ккал`;
+    body = suggestHTML(sl, tgt, day);
+  }
+  return `<section class="slot ${list.length?'filled':'empty'} ${orphan?'orphan':''}">
+    <header><div><h2>${esc(sl.name)}</h2><span class="time">${esc(sl.time)}</span></div><span class="slot-k">${kTxt}</span></header>
+    ${body}
+    <button class="add" data-act="pick" data-slot="${sl.id}">+ Добави ястие или продукт</button>
+  </section>`;
+}
+function macroLine(n){ return `<b class="kc">${fmt(n.k)} ккал</b> · Б ${r0(n.p)} · В ${r0(n.c)} · М ${r0(n.f)} г · сол ${s1(n.s)} г`; }
+function itemHTML(slot,e,i){
+  const f = FOOD[e.id]; if(!f) return '';
+  const n = nut(f,e.g);
+  return `<li class="item">
+    <div class="item-main"><div class="namerow">${starBtn(f.id)}${nameBtn(f)}</div>${warnTag(f)}<span class="item-macros">${macroLine(n)}</span></div>
+    <div class="grams">
+      <button data-act="minus" data-slot="${slot}" data-i="${i}" aria-label="По-малко грама">−</button>
+      <input id="g-${slot}-${i}" type="number" inputmode="numeric" min="0" step="5" value="${e.g}" data-act="grams" data-slot="${slot}" data-i="${i}" aria-label="Количество на ${esc(f.name)}">
+      <span class="unit">${unit(f)}</span>
+      <button data-act="plus" data-slot="${slot}" data-i="${i}" aria-label="Повече грама">+</button>
+      <button class="x" data-act="remove" data-slot="${slot}" data-i="${i}" aria-label="Махни ${esc(f.name)}">×</button>
+    </div>
+  </li>`;
+}
+function suggestHTML(sl, tgt, day){
+  if(tgt.k < 60) return `<p class="done">Калориите за деня са изпълнени. Ако все пак е гладен: зеленчуци, чай или кисело мляко.</p>`;
+  const picks = suggest(sl, tgt, day, seeds[sl.id]||0);
+  lastPicks[sl.id] = picks;
+  if(!picks.length) return '';
+  return `<div class="sugg"><div class="sugg-head"><span>Предложения, които влизат в целта</span><button class="link" data-act="shuffle" data-slot="${sl.id}">Други</button></div>` +
+    picks.map((p,j)=>{ const t=sumEntries(p.entries);
+      return `<div class="sug"><div class="sug-text"><span class="sug-name">${p.entries.map(e=>nameBtn(FOOD[e.id])+' <span class="g">'+e.g+' '+unit(FOOD[e.id])+'</span>').join(' + ')}</span><span class="item-macros">${macroLine(t)}</span></div><button class="btn-add" data-act="take" data-slot="${sl.id}" data-j="${j}">Добави</button></div>`;
+    }).join('') + '</div>';
+}
+
+/* ---------- Рецепти ---------- */
+function renderRecipes(){
+  const q = $('recSearch').value.trim().toLowerCase();
+  const order = ['zak','sup','osn','ska','gar','bez','sna','sla','mez'];
+  let html='';
+  const favList = allFoods().filter(f=>isFav(f.id) && hasRec(f.id) && (!q || f.name.toLowerCase().includes(q)));
+  if(favList.length) html += `<div class="rgroup"><h3>★ Любими</h3><ul class="rlist">${favList.map(recRow).join('')}</ul></div>`;
+  order.forEach(cat=>{
+    const list = allFoods().filter(f=>f.cat===cat && hasRec(f.id) && (!q || f.name.toLowerCase().includes(q)));
+    if(!list.length) return;
+    list.sort((a,b)=>a.name.localeCompare(b.name,'bg'));
+    html += `<div class="rgroup"><h3>${CATS[cat]}</h3><ul class="rlist">${list.map(recRow).join('')}</ul></div>`;
+  });
+  $('recList').innerHTML = html || '<p class="tip">Няма рецепта с такова име.</p>';
+}
+function recRow(f){ const r=REC[f.id]; const meta=[r[0],r[1]].filter(Boolean).join(' · ') || 'как да се вмести';
+  return `<li style="display:flex;align-items:center;padding-right:8px"><button type="button" style="flex:1;min-width:0" data-act="recipe" data-id="${esc(f.id)}"><span><span class="pname">${esc(f.name)}</span>${f.X?`<span class="warn-tag" style="display:block">${WARN}</span>`:''}<span class="rmeta">${esc(meta)}</span></span><span class="chev" aria-hidden="true">›</span></button>${starBtn(f.id)}</li>`; }
+let recFromSlot = null, recOpenId = null;
+function openRecipe(id, fromSlot){
+  const f = FOOD[id], r = REC[id]; if(!f || !r) return;
+  recFromSlot = fromSlot || null; recOpenId = id;
+  const [y,t,ing,steps,note] = r;
+  const n = nut(f,f.por);
+  $('recTitle').textContent = f.name;
+  let html = '';
+  const badges = [y && 'Количество: '+y, t && 'Време: '+t].filter(Boolean);
+  if(badges.length) html += `<div class="rbadges">${badges.map(b=>`<span class="rbadge">${esc(b)}</span>`).join('')}</div>`;
+  html += `<button type="button" class="favbtn ${isFav(id)?'on':''}" data-act="fav" data-id="${esc(id)}">${isFav(id)?'★ В любими':'☆ Добави в любими'}</button>`;
+  if(f.X) html += `<p class="warn-tag" style="font-size:1rem;margin:0">${WARN}</p>`;
+  html += `<p class="rnut">1 порция в дневника: ${f.por} ${unit(f)} · ${fmt(n.k)} ккал · Б ${r0(n.p)} · В ${r0(n.c)} · М ${r0(n.f)} г · сол ${s1(n.s)} г</p>`;
+  if(ing && ing.length) html += `<h4>Продукти</h4><ul>${ing.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;
+  if(steps && steps.length) html += `<h4>Приготвяне</h4><ol>${steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`;
+  if(note) html += `<p class="rnote">${esc(note)}</p>`;
+  if(recFromSlot) html += `<button class="save" type="button" data-act="recAdd" data-id="${esc(id)}">Добави към: ${esc(slotDef(recFromSlot).name)}</button>`;
+  $('recBody').innerHTML = html;
+  $('recipeSheet').hidden = false;
+  $('recBody').scrollTop = 0;
+}
+
+/* ---------- Правила ---------- */
+let rulesBuilt = false;
+function renderRules(){
+  if(rulesBuilt) return;
+  $('view-pravila').innerHTML = RULES.map(s=>`<details ${s.open?'open':''}><summary>${esc(s.t)}</summary><div class="rbody">${s.h}</div></details>`).join('');
+  rulesBuilt = true;
+}
+
+/* ---------- Действия ---------- */
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>{t.hidden=true},2600); }
+function addEntries(slot, entries){
+  const day = ensureDay(cur);
+  day.slots[slot] = (day.slots[slot]||[]).concat(entries.map(e=>({id:e.id,g:e.g})));
+  save(); render();
+}
+function autofill(){
+  const day = ensureDay(cur);
+  let added=0;
+  for(const sl of TYPES[day.type].slots){
+    if((day.slots[sl.id]||[]).length) continue;
+    const ctx = context(day); const tgt = ctx.tgt(sl);
+    if(tgt.k<60) continue;
+    const picks = suggest(sl, tgt, day, seeds[sl.id]||0);
+    if(picks.length){ day.slots[sl.id] = picks[0].entries.map(e=>({id:e.id,g:e.g})); added++; }
+  }
+  save(); render();
+  toast(added ? 'Денят е попълнен — смени каквото не му харесва.' : 'Няма празни хранения за попълване.');
+}
+function changeGrams(slot,i,g){
+  const day = ensureDay(cur); const l = day.slots[slot]; if(!l||!l[i]) return;
+  if(!(g>0)){ l.splice(i,1); } else l[i].g = Math.min(Math.round(g),3000);
+  save(); render();
+}
+function setView(v){
+  view = ['dnevnik','recepti','pravila'].includes(v) ? v : 'dnevnik';
+  try{ if(location.hash.slice(1)!==view) history.replaceState(null,'','#'+view); }catch(e){}
+  render(); window.scrollTo(0,0);
+}
+let clearArmed = 0;
+
+document.addEventListener('click', ev=>{
+  const el = ev.target.closest('[data-act]'); if(!el) return;
+  const act = el.dataset.act, slot = el.dataset.slot, i = Number(el.dataset.i);
+  if(act==='grams') return;
+  if(act==='tab'){ setView(el.dataset.view); }
+  else if(act==='prev'){ cur=shiftKey(cur,-1); render(); }
+  else if(act==='next'){ cur=shiftKey(cur,1); render(); }
+  else if(act==='today'){ cur=TODAY; render(); }
+  else if(act==='type'){ const day=ensureDay(cur); day.type=el.dataset.type; data.lastType=day.type; save(); render(); }
+  else if(act==='take'){ const p=(lastPicks[slot]||[])[Number(el.dataset.j)]; if(p) addEntries(slot,p.entries); }
+  else if(act==='shuffle'){ seeds[slot]=(seeds[slot]||0)+1; render(); }
+  else if(act==='minus'||act==='plus'){
+    const l=getDay(cur).slots[slot]; if(!l||!l[i]) return;
+    const g=l[i].g, step = g<100?5:10;
+    changeGrams(slot,i, act==='plus'? g+step : g-step);
+  }
+  else if(act==='remove'){ changeGrams(slot,i,0); }
+  else if(act==='pick'){ openPicker(slot); }
+  else if(act==='autofill'){ autofill(); }
+  else if(act==='copy'){
+    const y = data.days[shiftKey(cur,-1)];
+    if(!y || !Object.values(y.slots).some(l=>l.length)){ toast('За предишния ден няма записи.'); return; }
+    data.days[cur] = JSON.parse(JSON.stringify(y)); save(); render(); toast('Копирано от предишния ден.');
+  }
+  else if(act==='clear'){
+    const b=$('clearBtn');
+    if(Date.now()-clearArmed<3000){ delete data.days[cur]; save(); clearArmed=0; b.classList.remove('armed'); b.textContent='Изчисти деня'; render(); toast('Денят е изчистен.'); }
+    else { clearArmed=Date.now(); b.classList.add('armed'); b.textContent='Натисни пак за изчистване'; setTimeout(()=>{ if(Date.now()-clearArmed>=2900){ b.classList.remove('armed'); b.textContent='Изчисти деня'; } },3000); }
+  }
+  else if(act==='settings'){ openSettings(); }
+  else if(act==='close'){ closeSheets(); }
+  else if(act==='closeRecipe'){ $('recipeSheet').hidden=true; }
+  else if(act==='recipe'){ openRecipe(el.dataset.id, $('picker').hidden ? null : pickSlot); }
+  else if(act==='recAdd'){ const f=FOOD[el.dataset.id]; if(f && recFromSlot){ addEntries(recFromSlot,[{id:f.id,g:f.por}]); $('recipeSheet').hidden=true; closeSheets(); toast('Добавено: '+f.name); } }
+  else if(act==='addfood'){ const f=FOOD[el.dataset.id]; if(f){ addEntries(pickSlot,[{id:f.id,g:f.por}]); closeSheets(); toast('Добавено: '+f.name); } }
+  else if(act==='fav'){
+    toggleFav(el.dataset.id);
+    if(!$('recipeSheet').hidden && recOpenId) openRecipe(recOpenId, recFromSlot);
+    if(!$('picker').hidden) renderPickList();
+    if(!$('chooser').hidden) openChooser(chooserId);
+    render(); renderLogResults();
+  }
+  else if(act==='choose'){ openChooser(el.dataset.id); }
+  else if(act==='chooseSlot'){ const f=FOOD[chooserId]; if(f){ addEntries(el.dataset.slot,[{id:f.id,g:f.por}]); $('chooser').hidden=true; $('logSearch').value=''; renderLogResults(); toast('Добавено: '+f.name+' → '+slotDef(el.dataset.slot).name); } }
+  else if(act==='closeChooser'){ $('chooser').hidden=true; }
+  else if(act==='chip'){ pickCat=el.dataset.cat; renderPickList(); }
+  else if(act==='bcfind'){ lookupCode($('bcCode').value); }
+  else if(act==='bcmanual'){ fillCustom(null); }
+});
+document.addEventListener('change', ev=>{
+  const el=ev.target; if(el.dataset && el.dataset.act==='grams') changeGrams(el.dataset.slot, Number(el.dataset.i), parseFloat(el.value));
+});
+document.addEventListener('keydown', ev=>{
+  if(ev.key==='Escape'){ if(!$('recipeSheet').hidden) $('recipeSheet').hidden=true; else if(!$('chooser').hidden) $('chooser').hidden=true; else closeSheets(); }
+  if(ev.key==='Enter' && ev.target.dataset && ev.target.dataset.act==='grams') ev.target.blur();
+  if(ev.key==='Enter' && ev.target.id==='bcCode'){ ev.preventDefault(); lookupCode(ev.target.value); }
+});
+document.querySelectorAll('.sheet-wrap').forEach(w=>w.addEventListener('click', ev=>{ if(ev.target!==w) return; if(w.id==='recipeSheet'||w.id==='chooser') w.hidden=true; else closeSheets(); }));
+function closeSheets(){ $('picker').hidden=true; $('settings').hidden=true; }
+$('recSearch').addEventListener('input', renderRecipes);
+function renderLogResults(){
+  const q = $('logSearch').value.trim().toLowerCase();
+  const box = $('logResults');
+  if(!q){ box.hidden=true; box.innerHTML=''; return; }
+  const list = allFoods().filter(f=>f.name.toLowerCase().includes(q)).sort((a,b)=>(isFav(b.id)-isFav(a.id)) || a.name.localeCompare(b.name,'bg')).slice(0,15);
+  box.hidden=false;
+  box.innerHTML = list.length ? list.map(f=>{ const n=nut(f,f.por);
+    return `<li><button type="button" class="padd" data-act="choose" data-id="${esc(f.id)}"><span><span class="pname">${esc(f.name)}</span>${f.X?`<span class="warn-tag" style="display:block">${WARN}</span>`:''}<span class="pmeta">порция ${f.por} ${unit(f)} · ${fmt(n.k)} ккал</span></span><span class="plus" aria-hidden="true">+</span></button>${starBtn(f.id)}</li>`; }).join('')
+    : `<li style="padding:10px 12px" class="empty-list">Няма такова. Добави го през „+ Добави“ като своя храна.</li>`;
+}
+$('logSearch').addEventListener('input', renderLogResults);
+let chooserId = null;
+function openChooser(id){
+  const f = FOOD[id]; if(!f) return; chooserId = id;
+  const n = nut(f,f.por);
+  $('chTitle').textContent = f.name;
+  const slots = TYPES[getDay(cur).type].slots;
+  $('chBody').innerHTML = `<p class="rnut">порция ${f.por} ${unit(f)} · ${fmt(n.k)} ккал · Б ${r0(n.p)} · В ${r0(n.c)} · М ${r0(n.f)} г · сол ${s1(n.s)} г</p>${f.X?`<p class="warn-tag" style="margin:0;font-size:1rem">${WARN}</p>`:''}
+    <div class="sec-title">Добави към:</div>
+    <div class="slotbtns">${slots.map(s=>`<button type="button" data-act="chooseSlot" data-slot="${s.id}">${esc(s.name)}<span>${esc(s.time)}</span></button>`).join('')}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${hasRec(id)?`<button type="button" class="ghost small" data-act="recipe" data-id="${esc(id)}">Виж рецептата</button>`:''}<button type="button" class="favbtn ${isFav(id)?'on':''}" data-act="fav" data-id="${esc(id)}">${isFav(id)?'★ В любими':'☆ Добави в любими'}</button></div>`;
+  $('chooser').hidden = false;
+}
+window.addEventListener('hashchange', ()=>{ const h=location.hash.slice(1); if(h && h!==view) setView(h); });
+
+/* ---------- Избор на храна ---------- */
+let pickSlot=null, pickCat='fit';
+function slotDef(id){ const t=TYPES[getDay(cur).type]; return t.slots.find(s=>s.id===id) || {id, name:SLOTNAME[id]||'Друго', cats:[]}; }
+function openPicker(slot){
+  pickSlot=slot; const sl=slotDef(slot);
+  pickCat = data.favs.some(id=>FOOD[id]) ? 'fav' : (sl.cats.length ? 'fit' : 'all');
+  $('pickTitle').textContent = 'Добави към: '+sl.name;
+  $('pickSearch').value='';
+  $('bcPanel').hidden=true; $('bcCode').value=''; pendingCode=''; $('customBox').open=false;
+  $('picker').hidden=false;
+  renderPickList();
+}
+function renderPickList(){
+  const sl = slotDef(pickSlot);
+  const chips = (data.favs.length?[['fav','★ Любими']]:[]).concat([['fit','Подходящи'],['all','Всички']]).concat(Object.entries(CATS));
+  $('pickChips').innerHTML = chips.filter(c=>c[0]!=='fit'||sl.cats.length).map(([k,v])=>`<button type="button" data-act="chip" data-cat="${k}" aria-pressed="${pickCat===k}">${v}</button>`).join('');
+  const q = $('pickSearch').value.trim().toLowerCase();
+  let list = allFoods();
+  if(q) list = list.filter(f=>f.name.toLowerCase().includes(q));
+  else if(pickCat==='fav') list = list.filter(f=>isFav(f.id));
+  else if(pickCat==='fit') list = list.filter(f=>sl.cats.includes(f.cat) || f.cat==='nap' || (f.cat==='gar' && sl.cats.includes('osn')) || ((f.cat==='pro'||f.cat==='mez') && sl.cats.includes('mez')));
+  else if(pickCat!=='all') list = list.filter(f=>f.cat===pickCat);
+  const order = Object.keys(CATS);
+  list.sort((a,b)=> (order.indexOf(a.cat)-order.indexOf(b.cat)) || a.name.localeCompare(b.name,'bg'));
+  $('pickList').innerHTML = list.length ? list.map(f=>{ const n=nut(f,f.por);
+    return `<li><button type="button" class="padd" data-act="addfood" data-id="${esc(f.id)}"><span><span class="pname">${esc(f.name)}</span>${f.X?`<span class="warn-tag" style="display:block">${WARN}</span>`:''}<span class="pmeta">${CATS[f.cat]||''}${f.code?' · с баркод':''} · порция ${f.por} ${unit(f)} · ${fmt(n.k)} ккал · Б ${r0(n.p)} г · сол ${s1(n.s)} г</span></span><span class="plus" aria-hidden="true">+</span></button>${hasRec(f.id)?`<button type="button" class="prec" data-act="recipe" data-id="${esc(f.id)}">Рецепта</button>`:''}${starBtn(f.id)}</li>`; }).join('')
+    : `<li class="empty-list">Няма такава храна. Добави я отдолу като „своя храна“.</li>`;
+}
+$('pickSearch').addEventListener('input', renderPickList);
+$('cf-cat').innerHTML = Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${k==='pro'?'selected':''}>${v}</option>`).join('');
+$('customForm').addEventListener('submit', ev=>{
+  ev.preventDefault();
+  const num = id=>Math.max(0, parseFloat($(id).value)||0);
+  const name = $('cf-name').value.trim(); if(!name) return;
+  const food = {id:'c'+Date.now(), name, cat:$('cf-cat').value, k:num('cf-k'), p:num('cf-p'), c:num('cf-c'), f:num('cf-f'), s:num('cf-s'), por:Math.max(1,num('cf-por')||100)};
+  const code = $('cf-code').value.replace(/\D/g,'');
+  if(code){ food.code = code; data.custom = data.custom.filter(c=>c.code!==code); }
+  data.custom.push(food); buildFoods();
+  addEntries(pickSlot,[{id:food.id,g:food.por}]);
+  $('customForm').reset(); $('cf-cat').value='pro'; $('cf-por').value=100;
+  closeSheets(); toast('Запазено и добавено: '+name);
+});
+
+/* ---------- Баркод и етикет ---------- */
+let sampleFn = null, pendingCode = '';
+function updateLabelBtn(){
+  $('bcNewText').textContent = 'Въведи стойностите от етикета (на 100 г). Следващия път този баркод ще се разпознае веднага.';
+}
+updateLabelBtn();
+
+function bcShow(msg, isNew){ $('bcPanel').hidden=false; $('bcMsg').textContent=msg; $('bcNew').hidden=!isNew; }
+function loadZXing(){
+  if(window.ZXing) return Promise.resolve();
+  if(loadZXing.p) return loadZXing.p;
+  loadZXing.p = new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+    s.onload=()=>res(); s.onerror=()=>{ loadZXing.p=null; rej(new Error('zxing')); };
+    document.head.appendChild(s);
+  });
+  return loadZXing.p;
+}
+function fileToImage(file){
+  return new Promise((res,rej)=>{ const url=URL.createObjectURL(file); const img=new Image();
+    img.onload=()=>{ URL.revokeObjectURL(url); res(img); }; img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('img')); }; img.src=url; });
+}
+function toCanvas(img,max){
+  const sc=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+  const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(img.naturalWidth*sc)); c.height=Math.max(1,Math.round(img.naturalHeight*sc));
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height); return c;
+}
+async function decodeBarcode(file){
+  const img = await fileToImage(file);
+  if('BarcodeDetector' in window){
+    try{ const det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']}); const r=await det.detect(toCanvas(img,1600)); if(r && r.length) return r[0].rawValue; }catch(e){}
+  }
+  try{ await loadZXing(); }catch(e){ return null; }
+  const Z=window.ZXing, hints=new Map();
+  hints.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.EAN_8,Z.BarcodeFormat.UPC_A,Z.BarcodeFormat.UPC_E,Z.BarcodeFormat.CODE_128]);
+  hints.set(Z.DecodeHintType.TRY_HARDER,true);
+  const reader=new Z.MultiFormatReader(); reader.setHints(hints);
+  for(const max of [1200,800,1800]){
+    const src=new Z.HTMLCanvasElementLuminanceSource(toCanvas(img,max));
+    for(const s of [src, ()=>src.rotateCounterClockwise()]){
+      try{ const lum = typeof s==='function' ? s() : s; return reader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(lum))).getText(); }catch(e){ reader.reset && reader.reset(); }
+    }
+  }
+  return null;
+}
+function lookupCode(raw){
+  const code=String(raw||'').replace(/\D/g,'');
+  if(!code){ bcShow('Въведи цифрите под баркода.', false); return; }
+  $('bcCode').value=code; pendingCode=code;
+  const f=allFoods().find(x=>x.code===code);
+  if(f){ addEntries(pickSlot,[{id:f.id,g:f.por}]); closeSheets(); toast('Добавено: '+f.name); return; }
+  bcShow('Баркод '+code+' — този продукт още не е записан.', true);
+}
+function fillCustom(v){
+  const box=$('customBox'); box.open=true;
+  if(v && v.name) $('cf-name').value=v.name;
+  const set=(id,x)=>{ const n=Number(x); if(x!=null && x!=='' && isFinite(n)) $(id).value=Math.round(n*10)/10; };
+  if(v){ set('cf-k',v.kcal); set('cf-p',v.protein); set('cf-c',v.carbs); set('cf-f',v.fat); set('cf-s',v.salt); if(Number(v.portion)>0) $('cf-por').value=Math.round(v.portion); }
+  $('cf-code').value = pendingCode || $('bcCode').value.replace(/\D/g,'');
+  box.scrollIntoView({block:'start'});
+  if(!$('cf-name').value) $('cf-name').focus();
+}
+$('bcFile').addEventListener('change', async ev=>{
+  const file=ev.target.files && ev.target.files[0]; ev.target.value=''; if(!file) return;
+  bcShow('Разчитам баркода…', false);
+  let code=null; try{ code=await decodeBarcode(file); }catch(e){}
+  if(code) lookupCode(code);
+  else bcShow('Не успях да разчета баркода. Снимай го отблизо, на светло и без отблясъци — или въведи цифрите под него.', false);
+});
+
+
+/* ---------- Самостоятелно приложение: офлайн и гласово търсене ---------- */
+if('serviceWorker' in navigator){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let activeRec = null;
+function setupMic(btnId, inputId, after){
+  const btn = $(btnId), input = $(inputId);
+  if(!SR){ btn.hidden = true; return; }
+  btn.hidden = false;
+  btn.addEventListener('click', ()=>{
+    if(activeRec){ try{ activeRec.stop(); }catch(e){} return; }
+    let rec;
+    try{ rec = new SR(); }catch(e){ toast('Гласовото търсене не работи на този телефон.'); return; }
+    rec.lang = 'bg-BG'; rec.interimResults = true; rec.maxAlternatives = 1; rec.continuous = false;
+    activeRec = rec; btn.classList.add('on'); btn.setAttribute('aria-pressed','true');
+    input.value = ''; input.placeholder = 'Слушам… кажи ястието';
+    rec.onresult = ev=>{
+      let txt = '';
+      for(let i=0;i<ev.results.length;i++) txt += ev.results[i][0].transcript;
+      input.value = txt.trim().replace(/[.!?]$/,'');
+      after();
+    };
+    rec.onerror = ev=>{
+      if(ev.error==='not-allowed' || ev.error==='service-not-allowed') toast('Разреши микрофона: натисни катинарчето до адреса → Разрешения → Микрофон.');
+      else if(ev.error==='no-speech') toast('Не чух нищо — натисни микрофона и опитай пак.');
+      else if(ev.error==='network') toast('Гласовото търсене иска интернет.');
+    };
+    rec.onend = ()=>{ activeRec = null; btn.classList.remove('on'); btn.setAttribute('aria-pressed','false'); input.placeholder = input.dataset.ph || ''; after(); };
+    try{ rec.start(); }catch(e){ activeRec=null; btn.classList.remove('on'); }
+  });
+}
+$('logSearch').dataset.ph = $('logSearch').placeholder;
+$('pickSearch').dataset.ph = $('pickSearch').placeholder;
+setupMic('micLog','logSearch', renderLogResults);
+setupMic('micPick','pickSearch', renderPickList);
+if(SR){ const t=$('micTip'); if(t) t.hidden = true; }
+
+/* ---------- Настройки ---------- */
+const SET_FIELDS = ['sex','age','height','weight','act','goal','manual','pp','cp','fp','salt'];
+function readSettingsForm(){
+  const s = Object.assign({}, data.settings);
+  SET_FIELDS.forEach(k=>{ const v=$('st-'+k).value; s[k] = (k==='sex') ? v : (k==='manual' ? v : (parseFloat(v)||s[k])); });
+  return s;
+}
+function openSettings(){
+  SET_FIELDS.forEach(k=>{ $('st-'+k).value = data.settings[k]; });
+  $('settings').hidden=false; updateCalc();
+}
+function updateCalc(){
+  const keep = data.settings; data.settings = readSettingsForm(); const T = targets(); data.settings = keep;
+  $('setCalc').innerHTML = `Дневна цел: <b>${fmt(T.k)} ккал</b> · белтъчини ${r0(T.p)} г · въглехидрати ${r0(T.c)} г · мазнини ${r0(T.f)} г · сол до ${s1(T.s)} г`;
+}
+$('setForm').addEventListener('input', updateCalc);
+$('setForm').addEventListener('submit', ev=>{
+  ev.preventDefault(); data.settings = Object.assign(readSettingsForm(), {saved:true}); save(); closeSheets(); render(); toast('Целта е обновена.');
+});
+
+setView(location.hash.slice(1)||'dnevnik');
+</script>
+</body>
+</html>
