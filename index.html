@@ -373,6 +373,17 @@ p{margin:0}
 .swap th:first-child{border-radius:10px 0 0 10px}.swap th:last-child{border-radius:0 10px 10px 0}
 .swap td:last-child{color:var(--primary-strong);font-weight:500}
 
+/* Инсталиране (само в браузъра) */
+.install{display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:var(--r);box-shadow:var(--shadow);
+  background:var(--surface);background:linear-gradient(135deg,var(--primary-soft),var(--surface) 70%)}
+.install-top{display:flex;align-items:flex-start;gap:12px}
+.install-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding-top:1px}
+.install-text b{font-size:1rem;line-height:1.3}
+.install-text span{font-size:.86rem;color:var(--muted);line-height:1.4}
+.install-top .ibtn{margin:-6px -6px 0 0}
+.kbd{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--surface-2);color:var(--primary);vertical-align:middle;margin:0 2px}
+.kbd .i{width:18px;height:18px}
+
 /* Списъци */
 .list-wrap{display:flex;flex-direction:column;gap:12px}
 .chip .cnt{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;margin-left:6px;border-radius:99px;background:var(--primary-soft);color:var(--primary-strong);font-size:.74rem;font-weight:700;vertical-align:1px}
@@ -569,6 +580,10 @@ p{margin:0}
   <symbol id="i-tick" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8"/></symbol>
   <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5zM15 5l4 4"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></symbol>
+  <symbol id="i-square-plus" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></symbol>
   <symbol id="i-egg" viewBox="0 0 24 24"><path d="M12 22c6.23-.05 7.87-5.57 7.5-10-.36-4.34-3.95-9.96-7.5-10-3.55.04-7.14 5.66-7.5 10-.37 4.43 1.27 9.95 7.5 10z"/></symbol>
 </svg>
 
@@ -582,6 +597,14 @@ p{margin:0}
 
 <main class="app">
   <section class="view" id="view-dnevnik" aria-label="Дневник">
+    <div class="install" id="installBanner" hidden>
+      <div class="install-top">
+        <span class="badge-ico c-teal"><svg class="i" aria-hidden="true"><use href="#i-phone"/></svg></span>
+        <div class="install-text"><b>Сложи го на телефона като приложение</b><span>Отваря се от началния екран, на цял екран и работи и без интернет.</span></div>
+        <button type="button" class="ibtn" data-act="installHide" aria-label="Скрий"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+      </div>
+      <button type="button" class="btn btn-primary btn-block" data-act="install"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg><span>Инсталирай приложението</span></button>
+    </div>
     <div class="hero">
       <div class="datenav">
         <button type="button" class="glass" data-act="prev" aria-label="Предишен ден"><svg class="i" aria-hidden="true"><use href="#i-chev-left"/></svg></button>
@@ -777,6 +800,10 @@ p{margin:0}
         <p class="hint" id="macroHint"></p>
         <label class="field">Сол на ден, г<input id="st-salt" type="number" inputmode="decimal" min="1" max="15" step="0.5" required></label>
         <div class="calc" id="setCalc"></div>
+        <div id="installSet" hidden>
+          <div class="sec-title">Приложение</div>
+          <button type="button" class="btn btn-soft btn-block" data-act="install"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg><span>Инсталирай на телефона</span></button>
+        </div>
       </div>
       <div class="sheet-foot"><button class="btn btn-primary btn-block" type="submit"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg><span>Запази</span></button></div>
     </form>
@@ -818,6 +845,21 @@ p{margin:0}
     </div>
     <div class="sheet-body" id="shopBody"></div>
     <div class="sheet-foot"><button class="btn btn-primary btn-block" type="button" data-act="closeSheet"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg><span id="shopDone">Готово</span></button></div>
+  </div>
+</div>
+
+<div class="sheet-wrap" id="installSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="instTitle" tabindex="-1">
+    <div class="sheet-head"><h3 id="instTitle">Инсталирай на iPhone</h3><button type="button" class="close-btn" data-act="closeSheet" aria-label="Затвори"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-body">
+      <ol class="steps">
+        <li>Натисни бутона <b>„Сподели“</b> <span class="kbd"><svg class="i" aria-hidden="true"><use href="#i-share"/></svg></span> в лентата на браузъра.</li>
+        <li>Превърти надолу и избери <b>„Добави към началния екран“</b> <span class="kbd"><svg class="i" aria-hidden="true"><use href="#i-square-plus"/></svg></span>.</li>
+        <li>Натисни <b>„Добави“</b> горе вдясно. Иконата се появява на началния екран — отваряй приложението оттам.</li>
+      </ol>
+      <p class="hint">Ако не виждаш „Сподели“, отвори линка в Safari.</p>
+    </div>
+    <div class="sheet-foot"><button type="button" class="btn btn-primary btn-block" data-act="closeSheet"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg><span>Разбрах</span></button></div>
   </div>
 </div>
 
@@ -2060,6 +2102,8 @@ document.addEventListener('click', ev=>{
   else if(act==='shopToggle'){ toggleShopItem(el.dataset.t); }
   else if(act==='shopAddTyped'){ const q=$('shopSearch').value.trim(); if(q){ addListItems([q]); $('shopSearch').value=''; renderShop(); } }
   else if(act==='recToList'){ recipeToList(el.dataset.id); }
+  else if(act==='install'){ doInstall(); }
+  else if(act==='installHide'){ try{ localStorage.setItem(INST_KEY, '1'); }catch(e){} renderInstall(); toast('Скрито. Можеш да го инсталираш и от Настройки.'); }
   else if(act==='bcmanual'){ fillCustom(null); }
 });
 document.addEventListener('change', ev=>{
@@ -2490,6 +2534,35 @@ $('setForm').addEventListener('submit', ev=>{
 /* ---------- Дата от календара ---------- */
 $('datePick').addEventListener('click', ev=>{ try{ if(ev.target.showPicker) ev.target.showPicker(); }catch(e){} });
 $('datePick').addEventListener('change', ev=>{ const v = ev.target.value; if(/^\d{4}-\d{2}-\d{2}$/.test(v)){ cur = v; render(); } });
+
+/* ---------- Инсталиране — бутонът е само в сайта, в инсталираното приложение го няма ---------- */
+const INST_KEY = 'hranene-install-hidden';
+const isStandalone = ()=>(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone===true;
+const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+let installEvt = null;
+function renderInstall(){
+  const can = !isStandalone() && (!!installEvt || IS_IOS);
+  let hidden = false; try{ hidden = !!localStorage.getItem(INST_KEY); }catch(e){}
+  const card = $('installBanner'), was = card.hidden, y = window.scrollY;
+  card.hidden = !can || hidden;
+  $('installSet').hidden = !can;
+  // браузърът задържа видимото място и картата би останала скрита над екрана — ако си близо до върха, показваме я
+  if(was && !card.hidden && y < 120) window.scrollTo(0, 0);
+}
+// Android/Chrome: браузърът казва, че приложението може да се инсталира — пазим събитието за бутона.
+window.addEventListener('beforeinstallprompt', ev=>{ ev.preventDefault(); installEvt = ev; renderInstall(); });
+window.addEventListener('appinstalled', ()=>{ installEvt = null; renderInstall(); toast('Приложението е инсталирано — отваряй го от началния екран.'); });
+if(window.matchMedia){ const mq = window.matchMedia('(display-mode: standalone)'); if(mq.addEventListener) mq.addEventListener('change', renderInstall); }
+async function doInstall(){
+  if(installEvt){
+    const ev = installEvt; installEvt = null;   // прозорецът за инсталиране може да се покаже само веднъж
+    try{ await ev.prompt(); await ev.userChoice; }catch(e){}
+    renderInstall();
+  } else if(IS_IOS && !isStandalone()){
+    openSheet('installSheet');
+  }
+}
+renderInstall();
 
 /* ---------- Нова версия ----------
    Приложението се обновява само: при всяко отваряне с интернет се зарежда последната версия от GitHub.
