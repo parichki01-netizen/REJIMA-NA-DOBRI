@@ -2,9 +2,15 @@
 <html lang="bg">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Дневник на храненето</title>
-<meta name="theme-color" content="#1d5bd8">
+<meta name="description" content="Хранителен дневник с предложения, рецепти и правила">
+<meta name="theme-color" content="#f3f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c1210" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Хранене">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -12,310 +18,636 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600&display=swap" rel="stylesheet">
 <style>
+/* Мобилно приложение: горна лента със заглавие, съдържание в една колона, долна навигация (Дневник / Рецепти / Правила).
+   Прозорците се плъзгат отдолу. Зелено = основно действие. */
 :root{
-  /* Layout: one narrow column on white — tabs (Дневник / Рецепти / Правила), the day's balance, then meals in eating order; sheets slide up from the bottom. Blue = main action, black = secondary. */
-  --bg:#ffffff;
+  --bg:#f3f6f4;
   --surface:#ffffff;
-  --surface-2:#f4f6f9;
-  --ink:#0e1013;
-  --muted:#5e6672;
-  --line:#e2e5ea;
-  --blue:#1d5bd8;
-  --blue-ink:#ffffff;
-  --blue-soft:#eaf0fd;
-  --black:#0e1013;
-  --black-ink:#ffffff;
-  --prot:#1d5bd8;
-  --carb:#d39a10;
-  --fat:#7a4cc0;
-  --salt:#6b7380;
-  --warn:#c25a12;
-  --bad:#c42b1f;
+  --surface-2:#eef3f0;
+  --surface-3:#e2eae6;
+  --ink:#13201a;
+  --muted:#5d6b64;
+  --line:#e1e8e4;
+  --primary:#0b7f5c;
+  --primary-strong:#08694c;
+  --primary-soft:#e3f4ec;
+  --btn:#0b7f5c;
+  --btn-2:#0b6b7a;
+  --hero-a:#0c8560;
+  --hero-b:#0b6b7a;
+  --seg-track:#e3eae6;
+  --seg-thumb:#ffffff;
+  --prot:#3b6fe0;
+  --carb:#e0a100;
+  --fat:#c2459a;
+  --salt:#8a96a3;
+  --warn:#c2410c;
+  --warn-soft:#fff1e3;
+  --bad:#d0342c;
+  --bad-soft:#fdeceb;
+  --star:#e8a400;
+  --shadow-sm:0 1px 2px rgba(19,40,30,.07);
+  --shadow:0 1px 2px rgba(19,40,30,.05),0 6px 22px -10px rgba(19,40,30,.16);
+  --shadow-lg:0 -10px 40px rgba(10,25,18,.2);
+  --backdrop:rgba(6,16,11,.5);
   --font-d:"Unbounded","Golos Text",system-ui,sans-serif;
   --font-b:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --r:14px;
+  --r:20px;
+  --tabbar-h:64px;
+  --ease:cubic-bezier(.2,.8,.2,1);
   color-scheme:light;
 }
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg)}
-body{color:var(--ink);font-family:var(--font-b);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0c1210;
+    --surface:#141c19;
+    --surface-2:#1b2521;
+    --surface-3:#26322d;
+    --ink:#e7efeb;
+    --muted:#9aaba3;
+    --line:#23302a;
+    --primary:#3ccf98;
+    --primary-strong:#5ee0ad;
+    --primary-soft:#173a2e;
+    --btn:#14855f;
+    --btn-2:#0e6e7d;
+    --hero-a:#0f6e50;
+    --hero-b:#0b5160;
+    --seg-track:#141c19;
+    --seg-thumb:#26332e;
+    --prot:#7aa2ff;
+    --carb:#f0b429;
+    --fat:#f07ac4;
+    --salt:#9aa5b1;
+    --warn:#fb923c;
+    --warn-soft:#3a2614;
+    --bad:#ff8f87;
+    --bad-soft:#3a1d1b;
+    --star:#f5c242;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.6);
+    --shadow-lg:0 -10px 40px rgba(0,0,0,.55);
+    --backdrop:rgba(0,0,0,.6);
+    color-scheme:dark;
+  }
+}
+
+/* ---------- Основа ---------- */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html{background:var(--bg)}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--font-b);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;
+  padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 20px)}
+body.locked{overflow:hidden}
 button,input,select{font:inherit;color:inherit}
-button{cursor:pointer}
-:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
-.app{max-width:720px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:14px}
-h1,h2,h3{margin:0;text-wrap:balance}
-h1{font-family:var(--font-d);font-weight:600;font-size:1.12rem;letter-spacing:-.01em}
-.top{display:flex;flex-direction:column;gap:10px}
-.title-row,.date-row{display:flex;align-items:center;gap:8px}
-.title-row{justify-content:space-between}
-.date-row #dateLabel{font-weight:600;min-width:9.5em;text-align:center;text-transform:capitalize;flex:1}
-.icon-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--black);background:var(--surface);font-size:1.3rem;line-height:1}
-.ghost{background:var(--surface);border:1px solid var(--black);border-radius:10px;padding:7px 12px;font-weight:500}
-.ghost.small{padding:6px 10px;font-size:.9rem}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}
-.tabs button{border:0;background:none;padding:10px 4px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px}
-.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--blue)}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--black);border-radius:12px;padding:3px;gap:3px}
-.seg button{border:0;background:transparent;border-radius:9px;padding:8px 4px;font-weight:500}
-.seg button[aria-pressed="true"]{background:var(--black);color:var(--black-ink)}
-.tip{font-size:.88rem;color:var(--muted);margin:0}
-.tip[hidden]{display:none}
-.banner{background:var(--blue-soft);border-radius:var(--r);padding:10px 14px;font-size:.92rem;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.banner button{border:0;background:var(--blue);color:var(--blue-ink);border-radius:9px;padding:6px 12px;font-weight:600}
-.view[hidden]{display:none}
-.view{display:flex;flex-direction:column;gap:14px}
+input,select{font-size:16px}
+button{cursor:pointer;-webkit-user-select:none;user-select:none;transition:transform .12s var(--ease),background-color .2s,color .2s,box-shadow .2s,border-color .2s,opacity .2s}
+button:active{transform:scale(.96)}
+:focus-visible{outline:2.5px solid var(--primary);outline-offset:2px}
+h1,h2,h3,h4{margin:0;text-wrap:balance}
+p{margin:0}
+.i{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.sr-only{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;opacity:0}
 
-.summary{border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
-.sum-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
-.big{font-family:var(--font-d);font-weight:600;font-size:2.3rem;line-height:1;font-variant-numeric:tabular-nums;color:var(--blue)}
-.big.over{color:var(--warn)}
-.big-cap{color:var(--muted);font-size:.9rem;margin-top:4px}
-.sum-side{text-align:right;color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
-.sum-side b{color:var(--ink)}
-.bar{height:10px;background:var(--surface-2);border-radius:99px;overflow:hidden}
-.bar>span{display:block;height:100%;background:var(--blue);border-radius:99px;transition:width .25s}
-.bar.over>span{background:var(--warn)}
-.macros{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 16px}
-.macro .mrow{display:flex;justify-content:space-between;font-size:.86rem;gap:6px}
-.macro .mrow span:last-child{font-variant-numeric:tabular-nums;color:var(--muted)}
-.macro .bar{height:7px;margin-top:4px}
-.macro.prot .bar>span{background:var(--prot)}
-.macro.carb .bar>span{background:var(--carb)}
-.macro.fat .bar>span{background:var(--fat)}
-.macro.salt .bar>span{background:var(--salt)}
-.macro.warn .bar>span{background:var(--warn)}
-.macro.bad .bar>span{background:var(--bad)}
-.macro.bad .mrow span:last-child{color:var(--bad);font-weight:600}
-.remain{font-size:.88rem;color:var(--muted);margin:0}
+/* цветове за иконите на храненията и категориите */
+.c-amber{--c:#e08e00}.c-green{--c:#18a34a}.c-orange{--c:#ea580c}.c-indigo{--c:#5b5bd6}.c-pink{--c:#db2777}
+.c-teal{--c:#0d9488}.c-brown{--c:#b4691f}.c-red{--c:#dc2626}.c-slate{--c:#64748b}.c-blue{--c:#2f6fe4}
+@media (prefers-color-scheme: dark){
+  .c-amber{--c:#f5b335}.c-green{--c:#4ade80}.c-orange{--c:#fb8b4c}.c-indigo{--c:#9b9cf6}.c-pink{--c:#f472b6}
+  .c-teal{--c:#2dd4bf}.c-brown{--c:#e0a060}.c-red{--c:#f87171}.c-slate{--c:#a3b1c2}.c-blue{--c:#7aa2ff}
+}
+.badge-ico{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:0 0 auto;color:var(--c,var(--primary));
+  background:rgba(127,127,127,.12);background:color-mix(in srgb,var(--c,var(--primary)) 15%,transparent)}
+.badge-ico .i{width:21px;height:21px}
 
-.actions{display:flex;flex-wrap:wrap;gap:8px}
-.actions button{border:1px solid var(--black);background:var(--black);color:var(--black-ink);border-radius:10px;padding:9px 13px;font-weight:500}
-.actions .primary{background:var(--blue);border-color:var(--blue);color:var(--blue-ink);font-weight:600}
-.actions .armed{background:var(--bad);border-color:var(--bad)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}}
+@keyframes fadeOut{to{opacity:0}}
+@keyframes slideUp{from{transform:translateY(100%)}}
+@keyframes slideDown{to{transform:translateY(100%)}}
+@keyframes flash{0%{background-color:var(--primary-soft)}100%{background-color:transparent}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(208,52,44,.45)}50%{box-shadow:0 0 0 9px rgba(208,52,44,0)}}
 
-#slots{display:flex;flex-direction:column;gap:12px}
-.slot{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.slot>header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:12px 16px 8px}
-.slot h2{font-size:1.02rem;font-weight:600;display:inline}
-.slot .time{font-size:.82rem;color:var(--muted);margin-left:6px}
-.slot-k{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
-.slot.empty .slot-k{color:var(--muted);font-weight:500;font-size:.88rem;white-space:normal;text-align:right}
-.slot.orphan{border-style:dashed}
-.items{list-style:none;margin:0;padding:0 16px}
-.item{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--line)}
-.item:first-child{border-top:0}
-.item-main{display:flex;flex-direction:column;align-items:flex-start;min-width:0;flex:1 1 220px}
-.namebtn{background:none;border:0;padding:0;text-align:left;font-weight:500;color:var(--ink)}
-.namebtn.has-rec{text-decoration:underline;text-decoration-color:var(--blue);text-decoration-thickness:2px;text-underline-offset:3px}
-.warn-tag{color:var(--bad);font-weight:600;font-size:.82rem}
-.item-macros{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.item-macros .kc{color:var(--ink);font-weight:600}
-.grams{display:flex;align-items:center;gap:4px}
-.grams button{width:34px;height:34px;border-radius:9px;border:1px solid var(--black);background:var(--surface);font-size:1.1rem;line-height:1}
-.grams input{width:64px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--surface);text-align:center;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
-.grams input::-webkit-outer-spin-button,.grams input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.grams .unit{font-size:.85rem;color:var(--muted);margin-right:4px}
-.grams .x{color:var(--muted);border-color:transparent}
-.sugg{margin:0 12px;padding:10px 12px;background:var(--surface-2);border-radius:12px;display:flex;flex-direction:column;gap:8px}
-.sugg-head{display:flex;justify-content:space-between;align-items:center;font-size:.84rem;color:var(--muted)}
-.link{background:none;border:0;color:var(--blue);font-weight:600;padding:2px 4px}
-.sug{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px}
-.sug-text{display:flex;flex-direction:column;min-width:0;gap:2px}
-.sug-name{font-size:.95rem}
-.sug-name .g{color:var(--blue);font-weight:600;white-space:nowrap}
-.btn-add{border:0;background:var(--blue);color:var(--blue-ink);border-radius:9px;padding:8px 12px;font-weight:600;white-space:nowrap}
-.done{margin:0 16px;padding:10px 12px;border-radius:10px;background:var(--surface-2);font-size:.9rem;color:var(--muted)}
-.add{display:block;width:calc(100% - 24px);margin:10px 12px 12px;border:1.5px dashed var(--blue);background:transparent;border-radius:10px;padding:9px;color:var(--blue);font-weight:600}
-.foot{font-size:.82rem;color:var(--muted);margin:4px 0 0}
+/* ---------- Горна лента ---------- */
+.appbar{position:sticky;top:0;z-index:20;padding-top:env(safe-area-inset-top);background:var(--bg);
+  background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(16px);backdrop-filter:saturate(1.6) blur(16px);
+  transition:box-shadow .25s}
+.appbar.scrolled{box-shadow:0 1px 0 var(--line),0 8px 20px -16px rgba(0,0,0,.35)}
+.appbar-in{max-width:720px;margin:0 auto;padding:8px 16px;min-height:60px;display:flex;align-items:center;gap:10px}
+.appbar h1{flex:1;min-width:0;font-family:var(--font-d);font-weight:600;font-size:1.32rem;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{width:44px;height:44px;border-radius:50%;border:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);display:grid;place-items:center;flex:0 0 auto}
+.pill-btn{height:38px;padding:0 14px;border-radius:99px;border:0;background:var(--primary-soft);color:var(--primary-strong);font-weight:600;font-size:.9rem;display:inline-flex;align-items:center;gap:6px;flex:0 0 auto}
+.pill-btn .i{width:17px;height:17px}
 
-.star{flex:0 0 auto;width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:1.05rem;line-height:1}
-.star.on{background:var(--blue);border-color:var(--blue);color:var(--blue-ink)}
-.namerow{display:flex;align-items:center;gap:6px}
-.search-wrap{display:flex;flex-direction:column;gap:6px}
-.lsearch{width:100%;height:46px;border:1.5px solid var(--black);border-radius:12px;background:var(--surface);padding:0 14px;font-size:1rem}
-.lresults{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.lresults[hidden]{display:none}
-.lresults li{display:flex;align-items:center;gap:6px;padding-right:8px}
-.lresults li+li{border-top:1px solid var(--line)}
-.lresults .padd{flex:1;min-width:0;text-align:left;background:none;border:0;padding:10px 12px;display:flex;justify-content:space-between;gap:10px;align-items:center}
-.slotbtns{display:flex;flex-direction:column;gap:8px}
-.slotbtns button{border:1px solid var(--black);background:var(--surface);border-radius:10px;padding:11px 14px;text-align:left;font-weight:600;display:flex;justify-content:space-between;gap:10px}
-.slotbtns button span{font-weight:400;color:var(--muted);font-size:.88rem}
-.favbtn{border:1px solid var(--blue);background:var(--surface);color:var(--blue);border-radius:10px;padding:8px 12px;font-weight:600;align-self:flex-start}
-.favbtn.on{background:var(--blue);color:var(--blue-ink)}
-.srow{display:flex;gap:8px;align-items:center}
-.srow input{flex:1;min-width:0}
-.mic{flex:0 0 auto;width:46px;height:46px;border-radius:12px;border:0;background:var(--blue);color:var(--blue-ink);display:grid;place-items:center}
-.mic svg{width:22px;height:22px}
+/* ---------- Съдържание ---------- */
+.app{max-width:720px;margin:0 auto;padding:6px 16px 16px}
+.view{display:flex;flex-direction:column;gap:14px;animation:fadeUp .35s var(--ease)}
+
+/* Карта на деня */
+.hero{position:relative;overflow:hidden;isolation:isolate;border-radius:26px;padding:12px 14px 18px;color:#fff;
+  background:linear-gradient(145deg,var(--hero-a) 0%,var(--hero-b) 100%);
+  box-shadow:0 18px 34px -18px rgba(11,107,122,.75)}
+.hero::before,.hero::after{content:"";position:absolute;z-index:-1;border-radius:50%;pointer-events:none}
+.hero::before{width:240px;height:240px;right:-80px;top:-110px;background:radial-gradient(circle,rgba(255,255,255,.16),rgba(255,255,255,0) 70%)}
+.hero::after{width:200px;height:200px;left:-70px;bottom:-110px;background:radial-gradient(circle,rgba(255,255,255,.1),rgba(255,255,255,0) 70%)}
+.datenav{display:flex;align-items:center;gap:8px}
+.glass{width:42px;height:42px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;display:grid;place-items:center;flex:0 0 auto}
+.glass:active{background:rgba(255,255,255,.28)}
+.date-label{position:relative;flex:1;min-width:0;text-align:center;border-radius:14px;padding:4px 6px}
+.date-label b{display:block;font-family:var(--font-d);font-weight:600;font-size:1.05rem;letter-spacing:-.01em;line-height:1.25}
+.date-label > span{display:flex;align-items:center;justify-content:center;gap:5px;font-size:.84rem;opacity:.9}
+.date-label > span .i{width:14px;height:14px}
+.date-label input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;margin:0;cursor:pointer;font-size:16px}
+.date-label:active{background:rgba(255,255,255,.12)}
+.sum-main{display:flex;align-items:center;gap:16px;margin-top:12px}
+.ring{position:relative;width:136px;height:136px;flex:0 0 auto}
+.ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
+.ring .trk{stroke:rgba(255,255,255,.2)}
+.ring .fil{stroke:#fff;stroke-linecap:round;transition:stroke-dashoffset .9s var(--ease),stroke .3s,opacity .3s}
+.ring.zero .fil{opacity:0}
+.ring.over .fil{stroke:#ffc078}
+.ring-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 14px}
+.ring-c b{font-family:var(--font-d);font-weight:600;font-size:1.65rem;line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ring-c span{font-size:.76rem;opacity:.92;margin-top:4px;line-height:1.2}
+.ring.over .ring-c b{color:#ffd9b0}
+.sum-stats{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.stat{background:rgba(255,255,255,.13);border-radius:14px;padding:8px 12px}
+.stat span{display:block;font-size:.76rem;opacity:.9}
+.stat b{font-size:1.18rem;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.stat small{font-size:.78rem;opacity:.85;margin-left:2px}
+.macros{display:flex;flex-direction:column;gap:9px;margin-top:16px}
+.macro{display:grid;grid-template-columns:118px 1fr 86px;align-items:center;gap:10px}
+.macro .ml{font-size:.83rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.macro .v{font-size:.8rem;text-align:right;font-variant-numeric:tabular-nums;opacity:.92;white-space:nowrap}
+.macro .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mc);margin-right:7px;vertical-align:1px}
+.mbar{height:8px;border-radius:99px;background:rgba(255,255,255,.2);overflow:hidden}
+.mbar i{display:block;height:100%;width:0;border-radius:inherit;background:var(--mc);transition:width .8s var(--ease),background-color .3s}
+.macro.prot{--mc:#b4ceff}.macro.carb{--mc:#ffd76e}.macro.fat{--mc:#ffb8e1}.macro.salt{--mc:#e6edf3}
+.macro.over{--mc:#ffb066}.macro.over .v{font-weight:700;opacity:1}
+.macro.bad{--mc:#ff9d94}.macro.bad .v{font-weight:700;opacity:1;color:#ffd6d2}
+.remain{margin-top:14px;font-size:.8rem;opacity:.9;line-height:1.4}
+
+/* Тип ден */
+.seg{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:16px;background:var(--seg-track)}
+.seg::before{content:"";position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 16px)/3);border-radius:12px;background:var(--seg-thumb);
+  box-shadow:0 1px 2px rgba(0,0,0,.08),0 4px 12px -4px rgba(0,0,0,.14);transform:translateX(calc(var(--i,0) * (100% + 4px)));transition:transform .4s var(--ease)}
+.seg button{position:relative;z-index:1;border:0;background:none;padding:10px 4px;border-radius:12px;font-weight:600;font-size:.92rem;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;gap:6px}
+.seg button .i{width:18px;height:18px}
+.seg button[aria-pressed="true"]{color:var(--primary-strong)}
+.tip{display:flex;gap:8px;align-items:flex-start;font-size:.86rem;color:var(--muted);margin:-4px 4px 0}
+.tip .i{width:16px;height:16px;margin-top:2px}
+
+.banner{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;border-radius:18px;background:var(--warn-soft);font-size:.88rem;line-height:1.4}
+.banner > .i{color:var(--warn);width:22px;height:22px}
+.banner span{flex:1}
+.btn-sm{border:0;border-radius:99px;padding:8px 14px;background:var(--btn);color:#fff;font-weight:600;font-size:.88rem;flex:0 0 auto}
+
+/* Търсене */
+.search{display:flex;align-items:center;gap:8px}
+.search-field{position:relative;flex:1;min-width:0;display:block}
+.search-field > .i{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.search-field input{width:100%;height:52px;border:1.5px solid transparent;border-radius:16px;background:var(--surface);box-shadow:var(--shadow);padding:0 12px 0 46px;outline:none;
+  transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;appearance:none}
+.search-field input::placeholder{color:var(--muted);opacity:.85}
+.search-field input:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(11,127,92,.16)}
+.sheet .search-field input{background:var(--surface-2);box-shadow:none}
+.sheet .search-field input:focus{background:var(--surface)}
+.sq-btn{width:52px;height:52px;border-radius:16px;border:0;display:grid;place-items:center;flex:0 0 auto;cursor:pointer;
+  background:var(--ink);color:var(--bg);transition:transform .12s var(--ease)}
+.sq-btn:active{transform:scale(.95)}
+.sq-btn .i{width:22px;height:22px}
+.mic{background:linear-gradient(145deg,var(--btn),var(--btn-2));color:#fff;box-shadow:0 8px 18px -10px rgba(11,127,92,.9)}
 .mic.on{background:var(--bad);animation:pulse 1.2s infinite}
-.mic[hidden]{display:none}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(196,43,31,.45)}50%{box-shadow:0 0 0 8px rgba(196,43,31,0)}}
-@media (prefers-reduced-motion: reduce){ .mic.on{animation:none} }
+.results{list-style:none;margin:0;padding:4px 6px;border-radius:18px;background:var(--surface);box-shadow:var(--shadow);animation:fadeUp .2s var(--ease)}
+
+/* Ред с храна (търсене, избор) */
+.flist{list-style:none;margin:0;padding:0}
+.frow{display:flex;align-items:center;gap:4px;padding:2px 0}
+.frow + .frow{border-top:1px solid var(--line)}
+.fgroup{font-size:.74rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:14px 4px 6px}
+.fgroup:first-child{padding-top:4px}
+.fbody{flex:1;min-width:0;background:none;border:0;text-align:left;padding:9px 6px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;border-radius:12px}
+.fbody:active{transform:none;background:var(--surface-2)}
+.fname{font-weight:600;line-height:1.3}
+.fmeta{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.35}
+.empty-list{color:var(--muted);font-size:.9rem;padding:14px 8px;text-align:center}
+.ibtn{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:var(--muted);display:grid;place-items:center;flex:0 0 auto}
+.ibtn:active{background:var(--surface-2)}
+.star.on{color:var(--star)}
+.star.on .i{fill:currentColor}
+.round-add{width:40px;height:40px;border-radius:50%;border:0;background:linear-gradient(145deg,var(--btn),var(--btn-2));color:#fff;display:grid;place-items:center;flex:0 0 auto;
+  box-shadow:0 6px 14px -8px rgba(11,127,92,.9)}
+.round-add .i{width:20px;height:20px;stroke-width:2.5}
+
+/* Бутони */
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:10px 14px;border-radius:16px;border:0;font-weight:600;font-size:.94rem;line-height:1.2;text-align:center}
+.btn .i{width:19px;height:19px}
+.btn-primary{background:linear-gradient(135deg,var(--btn),var(--btn-2));color:#fff;box-shadow:0 10px 22px -12px rgba(11,127,92,.95)}
+.actions .btn-primary{grid-column:1/-1}
+.btn-soft{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.btn-soft.danger{color:var(--bad)}
+.btn-block{width:100%}
+
+/* Хранения */
+#slots{display:flex;flex-direction:column;gap:14px}
+.slot{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.slot-head{display:flex;align-items:center;gap:12px;padding:14px 16px 10px}
+.slot-title{flex:1;min-width:0}
+.slot-title h2{font-size:1.06rem;font-weight:700;line-height:1.25}
+.slot-title .time{display:block;font-size:.8rem;color:var(--muted);margin-top:1px}
+.slot-k{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:1.12rem;white-space:nowrap;line-height:1.15}
+.slot-k small{display:block;font-size:.72rem;color:var(--muted);font-weight:500}
+.slot.empty .slot-k{color:var(--muted);font-weight:600}
+.slot.orphan{box-shadow:var(--shadow),inset 0 0 0 2px var(--line)}
+.items{list-style:none;margin:0;padding:0 16px}
+.item{display:flex;flex-direction:column;gap:8px;padding:11px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item.new{animation:flash 1.4s ease;border-radius:12px}
+.item-top{display:flex;align-items:flex-start;gap:6px}
+.item-name{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding-top:8px}
+.item-top .ibtn{margin:-2px -8px 0 0}
+.namebtn{background:none;border:0;padding:0;text-align:left;font-weight:600;color:var(--ink);line-height:1.32}
+.namebtn:active{transform:none}
+.namebtn.has-rec{text-decoration:underline;text-decoration-color:rgba(11,127,92,.45);text-decoration-thickness:2px;text-underline-offset:4px}
+.item-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.macro-line{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.5}
+.item-bottom .macro-line{flex:1;min-width:0}
+.macro-line b{color:var(--ink);font-weight:700}
+.macro-line .mp::before,.macro-line .mc::before,.macro-line .mf::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:1px}
+.macro-line .mp::before{background:var(--prot)}.macro-line .mc::before{background:var(--carb)}.macro-line .mf::before{background:var(--fat)}
+.stepper{display:inline-flex;align-items:center;gap:2px;background:var(--surface-2);border-radius:99px;padding:3px;margin-left:auto}
+.stepper button{width:36px;height:36px;border-radius:50%;border:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm);display:grid;place-items:center}
+.stepper button .i{width:17px;height:17px;stroke-width:2.5}
+.stepper input{width:54px;height:36px;border:0;border-radius:10px;background:transparent;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;padding:0;outline:none;-moz-appearance:textfield}
+.stepper input:focus{background:var(--surface)}
+.stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.stepper .unit{font-size:.8rem;color:var(--muted);margin:0 4px 0 -2px}
+.warn-tag{display:inline-flex;align-items:center;gap:4px;color:var(--bad);background:var(--bad-soft);font-weight:600;font-size:.74rem;padding:2px 9px 2px 7px;border-radius:99px;line-height:1.5}
+.warn-tag .i{width:13px;height:13px}
+.warn-big{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--bad-soft);color:var(--bad);font-weight:600}
+
+.sugg{margin:0 12px;display:flex;flex-direction:column;gap:8px}
+.sugg.fresh .sug{animation:fadeUp .35s var(--ease) both}
+.sugg.fresh .sug:nth-child(3){animation-delay:.05s}.sugg.fresh .sug:nth-child(4){animation-delay:.1s}
+.sugg-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:0 4px;font-size:.74rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.link{display:inline-flex;align-items:center;gap:5px;background:none;border:0;color:var(--primary);font-weight:600;font-size:.86rem;padding:6px 10px;border-radius:99px;text-transform:none;letter-spacing:0}
+.link .i{width:16px;height:16px}
+.link:active{background:var(--primary-soft)}
+.sug{display:flex;gap:10px;align-items:center;background:var(--surface-2);border-radius:16px;padding:11px 10px 11px 13px}
+.sug-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.sug-name{font-size:.93rem;line-height:1.4}
+.sug .namebtn{font-weight:500}
+.sug-name .g{color:var(--primary);font-weight:700;white-space:nowrap;font-size:.84rem}
+.sug-name .sep{color:var(--muted);margin:0 2px}
+.btn-add{display:inline-flex;align-items:center;gap:4px;border:0;border-radius:99px;padding:9px 13px 9px 10px;background:linear-gradient(135deg,var(--btn),var(--btn-2));color:#fff;font-weight:600;font-size:.88rem;white-space:nowrap;flex:0 0 auto;
+  box-shadow:0 6px 14px -8px rgba(11,127,92,.9)}
+.btn-add .i{width:17px;height:17px;stroke-width:2.5}
+.done{margin:0 16px;padding:12px 14px;border-radius:14px;background:var(--primary-soft);color:var(--primary-strong);font-size:.9rem;display:flex;gap:10px;align-items:flex-start}
+.done .i{margin-top:1px}
+.add{display:flex;align-items:center;justify-content:center;gap:6px;width:calc(100% - 24px);margin:12px 12px 12px;border:1.5px dashed rgba(11,127,92,.45);background:transparent;border-radius:14px;padding:12px;color:var(--primary);font-weight:600}
+.add:active{background:var(--primary-soft)}
+.foot{font-size:.8rem;color:var(--muted);margin:4px 4px 0;line-height:1.55}
+
 /* Рецепти */
-.rsearch{width:100%;height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:0 12px}
-.rgroup h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:6px 0 4px}
-.rlist{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.rlist li+li{border-top:1px solid var(--line)}
-.rlist button{width:100%;text-align:left;background:none;border:0;padding:11px 14px;display:flex;justify-content:space-between;gap:10px;align-items:center}
-.rmeta{display:block;font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.chev{color:var(--blue);font-weight:700}
-.recipe h4{font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:6px 0 2px}
-.recipe ul,.recipe ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:5px}
-.recipe ol li::marker{color:var(--blue);font-weight:700}
-.rbadges{display:flex;flex-wrap:wrap;gap:6px}
-.rbadge{background:var(--surface-2);border-radius:99px;padding:4px 10px;font-size:.85rem;font-variant-numeric:tabular-nums}
-.rnote{background:var(--blue-soft);border-radius:10px;padding:10px 12px;font-size:.93rem;margin:0}
-.rnut{font-size:.88rem;color:var(--muted);margin:0}
+.chips{display:flex;gap:8px;overflow-x:auto;margin:0 -16px;padding:2px 16px 6px;scrollbar-width:none;flex-shrink:0;scroll-padding:16px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm);border-radius:99px;padding:9px 15px;font-size:.88rem;font-weight:600;white-space:nowrap}
+.sheet .chip{background:var(--surface-2);box-shadow:none}
+.chip[aria-pressed="true"]{background:linear-gradient(135deg,var(--btn),var(--btn-2));color:#fff;box-shadow:0 6px 14px -8px rgba(11,127,92,.9)}
+.rgroup{display:flex;flex-direction:column;gap:8px}
+.rgroup h3{font-size:.76rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 4px 0}
+.rlist{list-style:none;margin:0;padding:0;background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.rrow{display:flex;align-items:center;gap:2px;padding-right:6px}
+.rrow + .rrow{border-top:1px solid var(--line)}
+.rbtn{flex:1;min-width:0;display:flex;align-items:center;gap:12px;background:none;border:0;text-align:left;padding:12px 6px 12px 14px}
+.rbtn:active{transform:none;background:var(--surface-2)}
+.rtext{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+.chev{color:var(--muted);width:18px;height:18px}
+#recList{display:flex;flex-direction:column;gap:16px}
+
+/* Рецепта в прозорец */
+.rbadges{display:flex;flex-wrap:wrap;gap:8px}
+.rbadge{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border-radius:99px;padding:6px 12px;font-size:.85rem;font-weight:500}
+.rbadge .i{width:16px;height:16px;color:var(--primary)}
+.nutgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.nut{background:var(--surface-2);border-radius:14px;padding:10px 4px 9px;text-align:center;min-width:0}
+.nut::before{content:"";display:block;width:20px;height:4px;border-radius:2px;background:var(--mc,var(--primary));margin:0 auto 7px}
+.nut b{display:block;font-size:1.02rem;font-variant-numeric:tabular-nums;line-height:1.2}
+.nut span{display:block;font-size:.7rem;color:var(--muted);margin-top:2px}
+.nut.p{--mc:var(--prot)}.nut.c{--mc:var(--carb)}.nut.f{--mc:var(--fat)}
+.favbtn .i{color:var(--muted)}
+.favbtn.on .i{color:var(--star);fill:currentColor}
+.recipe h4{display:flex;align-items:baseline;gap:8px;font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.recipe h4 small{font-size:.74rem;letter-spacing:0;text-transform:none;font-weight:500}
+.ing{list-style:none;margin:0;padding:0}
+.ing li{position:relative;padding:10px 4px 10px 30px;border-bottom:1px solid var(--line);cursor:pointer;transition:color .2s,opacity .2s}
+.ing li:last-child{border-bottom:0}
+.ing li::before{content:"";position:absolute;left:4px;top:12px;width:16px;height:16px;border-radius:6px;border:2px solid var(--primary);transition:background .2s}
+.ing li.got{color:var(--muted);text-decoration:line-through;opacity:.75}
+.ing li.got::before{background:var(--primary)}
+.steps{list-style:none;counter-reset:st;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.steps li{counter-increment:st;position:relative;padding-left:42px;line-height:1.55;min-height:30px}
+.steps li::before{content:counter(st);position:absolute;left:0;top:-2px;width:30px;height:30px;border-radius:50%;background:var(--primary-soft);color:var(--primary-strong);font-weight:700;font-size:.86rem;display:grid;place-items:center}
+.rnote{display:flex;gap:10px;align-items:flex-start;background:var(--primary-soft);border-radius:14px;padding:12px 14px;font-size:.92rem;line-height:1.5}
+.rnote .i{color:var(--primary-strong);margin-top:1px}
 
 /* Правила */
-.rules details{border:1px solid var(--line);border-radius:12px;padding:0}
-.rules summary{list-style:none;cursor:pointer;padding:13px 16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.rules{gap:10px}
+.lead{color:var(--muted);font-size:.92rem;margin:0 4px 2px}
+.rules details{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.rules summary{list-style:none;cursor:pointer;padding:14px 14px 14px 14px;font-weight:700;display:flex;align-items:center;gap:12px;-webkit-user-select:none;user-select:none}
 .rules summary::-webkit-details-marker{display:none}
-.rules summary::after{content:"+";color:var(--blue);font-size:1.3rem;font-weight:600;line-height:1}
-.rules details[open] summary::after{content:"−"}
-.rules .rbody{padding:0 16px 14px;display:flex;flex-direction:column;gap:8px}
-.rules p{margin:0}
-.rules ul,.rules ol{margin:0;padding-left:1.25em;display:flex;flex-direction:column;gap:6px}
-.swap{width:100%;border-collapse:collapse;font-size:.9rem}
-.swap th,.swap td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-.swap th{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
-.rules{display:flex;flex-direction:column;gap:10px}
+.rules summary .rt{flex:1;line-height:1.3}
+.rules summary .badge-ico{width:36px;height:36px;border-radius:11px;font-size:.9rem;font-weight:700}
+.rules summary .chev{transition:transform .3s var(--ease)}
+.rules details[open] summary .chev{transform:rotate(180deg)}
+.rules .rbody{padding:0 16px 16px;display:flex;flex-direction:column;gap:10px;line-height:1.58;animation:fadeUp .3s var(--ease)}
+.rules ul,.rules ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
+.rules li::marker{color:var(--primary);font-weight:700}
+.swap-wrap{overflow-x:auto;margin:0 -4px}
+.swap{width:100%;border-collapse:collapse;font-size:.88rem}
+.swap th,.swap td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.swap th{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:var(--surface-2)}
+.swap th:first-child{border-radius:10px 0 0 10px}.swap th:last-child{border-radius:0 10px 10px 0}
+.swap td:last-child{color:var(--primary-strong);font-weight:500}
 
-/* Листове */
-.sheet-wrap{position:fixed;inset:0;background:rgba(8,10,14,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20}
-.sheet-wrap[hidden]{display:none}
-.sheet{background:var(--surface);width:100%;max-width:720px;max-height:90%;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden}
-.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
-.sheet-head h3{font-size:1.02rem}
-.sheet-body{overflow:auto;padding:12px 16px 20px;display:flex;flex-direction:column;gap:10px}
-.sheet input[type=search],.field input,.field select{width:100%;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:0 12px}
-.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
-.chips button{flex:0 0 auto;border:1px solid var(--black);background:var(--surface);border-radius:99px;padding:5px 11px;font-size:.85rem;white-space:nowrap}
-.chips button[aria-pressed="true"]{background:var(--black);color:var(--black-ink)}
-.plist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
-.plist li{display:flex;align-items:center;gap:6px}
-.plist li+li{border-top:1px solid var(--line)}
-.plist .padd{flex:1;min-width:0;text-align:left;background:none;border:0;padding:10px 2px;display:flex;justify-content:space-between;gap:10px;align-items:center}
-.plist .prec{flex:0 0 auto;border:1px solid var(--black);background:var(--surface);border-radius:8px;padding:5px 9px;font-size:.82rem;font-weight:500}
-.pname{font-weight:500}
-.pmeta{display:block;font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.plus{flex:0 0 auto;width:30px;height:30px;border-radius:8px;background:var(--blue);color:var(--blue-ink);display:grid;place-items:center;font-weight:700}
-.empty-list{color:var(--muted);font-size:.9rem;padding:8px 0}
-#customBox{border:1px solid var(--line);border-radius:12px;padding:8px 12px}
-#customBox summary{cursor:pointer;font-weight:600;color:var(--blue)}
-.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
+/* ---------- Прозорци отдолу ---------- */
+.sheet-wrap{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;background:var(--backdrop);animation:fadeIn .25s ease}
+.sheet-wrap.closing{animation:fadeOut .22s ease forwards;pointer-events:none}
+.sheet{position:relative;width:100%;max-width:720px;max-height:92vh;max-height:92dvh;display:flex;flex-direction:column;overflow:hidden;
+  background:var(--surface);border-radius:28px 28px 0 0;box-shadow:var(--shadow-lg);animation:slideUp .38s var(--ease);padding-bottom:env(safe-area-inset-bottom)}
+.sheet:focus{outline:none}
+.sheet-wrap.closing .sheet{animation:slideDown .22s ease-in forwards}
+.sheet-head{position:relative;display:flex;align-items:center;gap:10px;padding:24px 16px 12px;touch-action:none}
+.sheet-head::before{content:"";position:absolute;top:9px;left:50%;width:42px;height:5px;margin-left:-21px;border-radius:99px;background:var(--surface-3)}
+.sheet-head h3{flex:1;min-width:0;font-size:1.12rem;font-weight:700;line-height:1.3}
+.close-btn{width:40px;height:40px;border-radius:50%;border:0;background:var(--surface-2);color:var(--ink);display:grid;place-items:center;flex:0 0 auto}
+.sheet-sub{display:flex;flex-direction:column;gap:10px;padding:0 16px 10px;border-bottom:1px solid var(--line)}
+.sheet-body{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:10px 16px 24px;display:flex;flex-direction:column;gap:12px}
+.sheet-body > *{flex-shrink:0}
+.sheet-form{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.sheet-foot{padding:12px 16px 14px;border-top:1px solid var(--line);background:var(--surface)}
+
+/* Формуляри */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid.g3{grid-template-columns:repeat(3,1fr)}
 .form-grid .wide{grid-column:1/-1}
-.field{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted)}
-.field input,.field select{color:var(--ink)}
-.calc{background:var(--blue-soft);border-radius:12px;padding:10px 12px;font-size:.92rem}
-.calc b{font-family:var(--font-d);font-weight:600}
-.save{border:0;background:var(--blue);color:var(--blue-ink);border-radius:10px;padding:11px;font-weight:600}
-.sec-title{font-weight:600;font-size:.92rem;margin-top:6px}
-.scan-row{display:flex;gap:8px;flex-wrap:wrap}
-.scan-btn{display:inline-flex;align-items:center;gap:8px;border:0;color:var(--black-ink);background:var(--black);border-radius:10px;padding:9px 13px;font-weight:600;cursor:pointer;align-self:flex-start}
-.scan-btn.blue{background:var(--blue);color:var(--blue-ink)}
-.scan-btn svg{width:20px;height:20px}
-.scan-btn[hidden]{display:none}
-.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;opacity:0}
-.bcpanel{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--surface-2)}
-.bcpanel[hidden],.bcnew[hidden]{display:none}
-.bcnew{display:flex;flex-direction:column;gap:8px}
-.bcpanel p{margin:0;font-size:.9rem}
+.field{display:flex;flex-direction:column;gap:6px;font-size:.82rem;font-weight:600;color:var(--muted);min-width:0}
+.field input,.field select,.bc-manual input{width:100%;height:48px;border:1.5px solid var(--line);border-radius:13px;background:var(--surface-2);color:var(--ink);padding:0 12px;font-size:16px;font-weight:500;outline:none;
+  transition:border-color .2s,box-shadow .2s,background-color .2s;-webkit-appearance:none;appearance:none}
+.field select{padding-right:34px;text-overflow:ellipsis;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a9a92' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;background-size:18px}
+.field input:focus,.field select:focus,.bc-manual input:focus{border-color:var(--primary);background-color:var(--surface);box-shadow:0 0 0 4px rgba(11,127,92,.14)}
+.field input::placeholder{color:var(--muted);opacity:.7;font-weight:400}
+.sec-title{font-size:.76rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:8px 2px -2px}
+.sec-title:first-child{margin-top:0}
+.hint{font-size:.82rem;color:var(--muted);margin:-4px 2px 0}
+.hint.bad{color:var(--warn)}
+.calc{border-radius:18px;padding:14px 16px;color:#fff;background:linear-gradient(145deg,var(--hero-a),var(--hero-b))}
+.calc span{display:block;font-size:.8rem;opacity:.9}
+.calc b{display:block;font-family:var(--font-d);font-weight:600;font-size:1.5rem;letter-spacing:-.02em;margin:2px 0 8px}
+.calc-m{display:flex;flex-wrap:wrap;gap:6px}
+.calc-m em{font-style:normal;font-size:.82rem;background:rgba(255,255,255,.16);border-radius:99px;padding:3px 10px}
+.custom{border-radius:16px;background:var(--surface-2);padding:0 14px}
+.custom summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 0;font-weight:600;color:var(--primary)}
+.custom summary::-webkit-details-marker{display:none}
+.custom summary span{flex:1}
+.custom summary .chev{transition:transform .3s var(--ease)}
+.custom[open] summary .chev{transform:rotate(180deg)}
+.custom .form-grid{padding-bottom:14px}
+.custom .field input,.custom .field select{background-color:var(--surface)}
+.bcpanel{border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;background:var(--surface-2)}
+.bcpanel p{font-size:.9rem}
 .bc-manual{display:flex;gap:8px}
-.bc-manual input{flex:1;min-width:0;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:0 12px;font-variant-numeric:tabular-nums}
-.bc-manual button{border:0;background:var(--black);color:var(--black-ink);border-radius:10px;padding:0 14px;font-weight:600}
-.status{font-weight:500}
-.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--black);color:var(--black-ink);padding:9px 14px;border-radius:10px;font-size:.9rem;z-index:30;max-width:calc(100% - 32px)}
-.toast[hidden]{display:none}
-@media (max-width:420px){ .big{font-size:2rem} .macros{gap:8px 12px} }
-@media (prefers-reduced-motion: reduce){ .bar>span{transition:none} }
+.bc-manual input{flex:1;min-width:0;font-variant-numeric:tabular-nums;background-color:var(--surface)}
+.bc-manual button{border:0;border-radius:13px;padding:0 16px;background:var(--ink);color:var(--bg);font-weight:600}
+.bcnew{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.status{font-weight:600}
+
+/* Избор на хранене */
+.slotgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.slotgrid button{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 10px;border-radius:16px;border:0;background:var(--surface-2);text-align:left;min-height:62px}
+.slotgrid .badge-ico{width:38px;height:38px;border-radius:12px}
+.slotgrid b{display:block;font-size:.92rem;line-height:1.25}
+.slotgrid small{display:block;font-size:.76rem;color:var(--muted);margin-top:1px}
+.row-btns{display:flex;gap:10px;flex-wrap:wrap}
+.row-btns .btn{flex:1 1 140px;min-height:46px}
+.sheet .btn-soft{background:var(--surface-2);box-shadow:none}
+.nutline{font-size:.86rem}
+
+/* Долна навигация */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;padding-bottom:env(safe-area-inset-bottom);border-top:1px solid var(--line);
+  background:var(--surface);background:color-mix(in srgb,var(--surface) 88%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(18px);backdrop-filter:saturate(1.6) blur(18px)}
+.tabbar-in{max-width:720px;margin:0 auto;height:var(--tabbar-h);display:grid;grid-template-columns:repeat(3,1fr)}
+.tab{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.74rem;font-weight:600;color:var(--muted)}
+.tab:active{transform:scale(.94)}
+.tab .tab-ico{width:60px;height:32px;border-radius:99px;display:grid;place-items:center;transition:background-color .3s var(--ease),color .3s}
+.tab .i{width:22px;height:22px}
+.tab[aria-selected="true"]{color:var(--primary-strong)}
+.tab[aria-selected="true"] .tab-ico{background:var(--primary-soft)}
+
+/* Известие */
+.toast{position:fixed;left:50%;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 14px);transform:translateX(-50%);z-index:80;
+  width:max-content;max-width:calc(100% - 32px);display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-radius:16px;
+  background:#16231d;color:#f1f7f4;font-size:.9rem;font-weight:500;box-shadow:0 14px 30px -12px rgba(0,0,0,.5);animation:toastIn .35s var(--ease)}
+@media (prefers-color-scheme: dark){ .toast{background:#e9f2ee;color:#13201a} }
+.toast > .i{color:#4fd8a4;width:19px;height:19px}
+@media (prefers-color-scheme: dark){ .toast > .i{color:#0b7f5c} }
+.toast span{padding:4px 0}
+.toast:not(:has(.toast-btn)){padding-right:16px}
+.toast-btn{border:0;border-radius:11px;padding:7px 12px;background:rgba(255,255,255,.14);color:#7ff0c4;font-weight:700;font-size:.86rem;flex:0 0 auto}
+@media (prefers-color-scheme: dark){ .toast-btn{background:rgba(0,0,0,.07);color:#08694c} }
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,16px) scale(.96)}}
+
+@media (max-width:360px){
+  .ring{width:118px;height:118px}
+  .ring-c b{font-size:1.4rem}
+  .ring-c{padding:0 18px}
+  .sum-main{gap:12px}
+  .stat{padding:7px 10px}
+  .macro{grid-template-columns:100px 1fr 72px;gap:8px}
+  .macro .ml{font-size:.76rem}
+  .macro .v{font-size:.74rem}
+  .stepper input{width:46px}
+  .seg button{font-size:.86rem;gap:4px}
+  .seg button .i{width:16px;height:16px}
+  .form-grid.g3{gap:8px}
+}
+@media (min-width:560px){
+  .appbar-in,.app{padding-left:24px;padding-right:24px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
 </style>
 </head>
 <body>
-<div class="app">
-  <header class="top">
-    <div class="title-row">
-      <h1>Дневник на храненето</h1>
-      <button class="ghost small" data-act="settings">Настройки</button>
-    </div>
-    <nav class="tabs" role="tablist" aria-label="Раздели">
-      <button role="tab" data-act="tab" data-view="dnevnik" aria-selected="true">Дневник</button>
-      <button role="tab" data-act="tab" data-view="recepti" aria-selected="false">Рецепти</button>
-      <button role="tab" data-act="tab" data-view="pravila" aria-selected="false">Правила</button>
-    </nav>
-  </header>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-chev-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chev-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></symbol>
+  <symbol id="i-barcode" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M8 7v10M12 7v10M16 7v10"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m8 12 2.7 2.7L16 9.5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M11.53 2.3a.53.53 0 0 1 .94 0l2.31 4.68a2.12 2.12 0 0 0 1.6 1.16l5.16.76a.53.53 0 0 1 .3.9l-3.74 3.64a2.12 2.12 0 0 0-.61 1.88l.88 5.14a.53.53 0 0 1-.77.56l-4.62-2.43a2.12 2.12 0 0 0-1.97 0L6.4 21.01a.53.53 0 0 1-.77-.56l.88-5.14a2.12 2.12 0 0 0-.61-1.88L2.16 9.8a.53.53 0 0 1 .3-.9l5.16-.76a2.12 2.12 0 0 0 1.6-1.16z"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96l-6.14 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/><path d="M20 3v4M22 5h-4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+  <symbol id="i-chef" viewBox="0 0 24 24"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.46.32-.84.73-1.04a4 4 0 0 0-2.13-7.59 5 5 0 0 0-9.2 0 4 4 0 0 0-2.13 7.59c.41.2.73.58.73 1.04V20a1 1 0 0 0 1 1ZM6 17h12"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .71-1.53l7-6a2 2 0 0 1 2.58 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M10 2v2M14 2v2M6 2v2M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/></symbol>
+  <symbol id="i-apple" viewBox="0 0 24 24"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"/><path d="M10 2c1 .5 2 2 2 5"/></symbol>
+  <symbol id="i-utensils" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></symbol>
+  <symbol id="i-cookie" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/><path d="M8.5 8.5v.01M16 15.5v.01M12 12v.01M11 17v.01M7 14v.01"/></symbol>
+  <symbol id="i-briefcase" viewBox="0 0 24 24"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect x="2" y="6" width="20" height="14" rx="2"/></symbol>
+  <symbol id="i-soup" viewBox="0 0 24 24"><path d="M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9ZM7 21h10M19.5 12 22 6"/><path d="M16.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.73 1.62M11.25 3c.27.1.8.53.74 1.36-.05.83-.93 1.2-.98 2.02-.06.78.33 1.24.72 1.62M6.25 3c.27.1.8.53.75 1.36-.06.83-.93 1.2-1 2.02-.05.78.34 1.24.74 1.62"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="i-salad" viewBox="0 0 24 24"><path d="M7 21h10M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z"/><path d="M11.38 12a2.4 2.4 0 0 1-.4-4.77 2.4 2.4 0 0 1 3.2-2.77 2.4 2.4 0 0 1 3.47-.63 2.4 2.4 0 0 1 3.37 3.37 2.4 2.4 0 0 1-1.1 3.7 2.51 2.51 0 0 1 .03 1.1M13 12l4-4M10.9 7.25A4 4 0 0 0 4 10c0 .73.2 1.41.54 2"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></symbol>
+  <symbol id="i-wine" viewBox="0 0 24 24"><path d="M8 22h8M7 10h10M12 15v7M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z"/></symbol>
+  <symbol id="i-egg" viewBox="0 0 24 24"><path d="M12 22c6.23-.05 7.87-5.57 7.5-10-.36-4.34-3.95-9.96-7.5-10-3.55.04-7.14 5.66-7.5 10-.37 4.43 1.27 9.95 7.5 10z"/></symbol>
+</svg>
 
-  <section class="view" id="view-dnevnik">
-    <div class="date-row">
-      <button class="icon-btn" data-act="prev" aria-label="Предишен ден">‹</button>
-      <div id="dateLabel"></div>
-      <button class="icon-btn" data-act="next" aria-label="Следващ ден">›</button>
-      <button class="ghost small" data-act="today">Днес</button>
-    </div>
-    <div class="search-wrap">
-      <div class="srow">
-  <input class="lsearch" id="logSearch" type="search" placeholder="Търси или кажи ястие и го добави…" autocomplete="off" aria-label="Търси ястие">
-        <button type="button" class="mic" id="micLog" aria-label="Търси с глас" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg></button>
+<header class="appbar" id="appbar">
+  <div class="appbar-in">
+    <h1 id="viewTitle">Дневник</h1>
+    <button type="button" class="pill-btn" id="todayBtn" data-act="today" hidden><svg class="i" aria-hidden="true"><use href="#i-calendar"/></svg>Днес</button>
+    <button type="button" class="icon-btn" data-act="settings" aria-label="Настройки и дневна цел"><svg class="i" aria-hidden="true"><use href="#i-sliders"/></svg></button>
+  </div>
+</header>
+
+<main class="app">
+  <section class="view" id="view-dnevnik" aria-label="Дневник">
+    <div class="hero">
+      <div class="datenav">
+        <button type="button" class="glass" data-act="prev" aria-label="Предишен ден"><svg class="i" aria-hidden="true"><use href="#i-chev-left"/></svg></button>
+        <div class="date-label">
+          <b id="dateMain">Днес</b>
+          <span><svg class="i" aria-hidden="true"><use href="#i-calendar"/></svg><span id="dateSub"></span></span>
+          <input type="date" id="datePick" aria-label="Избери дата">
+        </div>
+        <button type="button" class="glass" data-act="next" aria-label="Следващ ден"><svg class="i" aria-hidden="true"><use href="#i-chev-right"/></svg></button>
       </div>
-      <ul class="lresults" id="logResults" hidden></ul>
-      <p class="tip" id="micTip" style="display:flex;gap:6px;align-items:center"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg>Може и с глас: натисни полето, после микрофона на клавиатурата и кажи ястието.</p>
+      <div class="sum-main">
+        <div class="ring zero" id="ring">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="trk" cx="60" cy="60" r="52" fill="none" stroke-width="11"/>
+            <circle class="fil" id="ringFill" cx="60" cy="60" r="52" fill="none" stroke-width="11" stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
+          </svg>
+          <div class="ring-c" aria-live="polite"><b id="kLeft">0</b><span id="kLeftCap">ккал остават</span></div>
+        </div>
+        <div class="sum-stats">
+          <div class="stat"><span>Изядени</span><b id="kEaten">0</b><small>ккал</small></div>
+          <div class="stat"><span>Цел за деня</span><b id="kGoal">0</b><small>ккал</small></div>
+        </div>
+      </div>
+      <div class="macros">
+        <div class="macro prot" id="m-prot"><span class="ml"><i class="dot"></i>Белтъчини</span><div class="mbar"><i></i></div><span class="v"></span></div>
+        <div class="macro carb" id="m-carb"><span class="ml"><i class="dot"></i>Въглехидрати</span><div class="mbar"><i></i></div><span class="v"></span></div>
+        <div class="macro fat" id="m-fat"><span class="ml"><i class="dot"></i>Мазнини</span><div class="mbar"><i></i></div><span class="v"></span></div>
+        <div class="macro salt" id="m-salt"><span class="ml"><i class="dot"></i>Сол</span><div class="mbar"><i></i></div><span class="v"></span></div>
+      </div>
+      <p class="remain" id="remain" hidden></p>
     </div>
+
     <div class="seg" id="typeSeg" role="group" aria-label="Тип ден"></div>
     <p class="tip" id="typeTip"></p>
     <div id="banner"></div>
-    <section class="summary" id="summary" aria-live="polite"></section>
-    <div class="actions">
-      <button class="primary" data-act="autofill">Попълни деня автоматично</button>
-      <button data-act="copy">Копирай от вчера</button>
-      <button data-act="clear" id="clearBtn">Изчисти деня</button>
+
+    <div class="search">
+      <label class="search-field"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="logSearch" type="search" placeholder="Търси ястие и го добави…" autocomplete="off" enterkeyhint="search" aria-label="Търси ястие">
+      </label>
+      <button type="button" class="sq-btn mic" id="micLog" aria-label="Търси с глас" aria-pressed="false" hidden><svg class="i" aria-hidden="true"><use href="#i-mic"/></svg></button>
     </div>
+    <ul class="results flist" id="logResults" hidden></ul>
+    <p class="tip" id="micTip" hidden><svg class="i" aria-hidden="true"><use href="#i-mic"/></svg><span>Може и с глас: натисни полето, после микрофона на клавиатурата и кажи ястието.</span></p>
+
+    <div class="actions">
+      <button type="button" class="btn btn-primary" data-act="autofill"><svg class="i" aria-hidden="true"><use href="#i-sparkles"/></svg><span>Попълни деня автоматично</span></button>
+      <button type="button" class="btn btn-soft" data-act="copy"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg><span>Копирай от вчера</span></button>
+      <button type="button" class="btn btn-soft danger" data-act="clear"><svg class="i" aria-hidden="true"><use href="#i-trash"/></svg><span>Изчисти деня</span></button>
+    </div>
+
     <div id="slots"></div>
-    <p class="foot">Натисни името на ястие, за да видиш рецептата. Стойностите са приблизителни — за домашно сготвени ястия с малко сол. Предложенията се смятат наново след всяко добавено ястие, така че последното хранене „довършва“ калориите и макросите. Записите се пазят само в този браузър.</p>
+    <p class="foot">Натисни подчертаното име на ястие, за да видиш рецептата. Стойностите са приблизителни — за домашно сготвени ястия с малко сол. Предложенията се смятат наново след всяко добавено ястие, така че последното хранене „довършва“ калориите и макросите. Записите се пазят само на този телефон, в този браузър.</p>
   </section>
 
-  <section class="view" id="view-recepti" hidden>
-    <input class="rsearch" id="recSearch" type="search" placeholder="Търси рецепта: боб, пиле, сладко…" autocomplete="off" aria-label="Търсене на рецепта">
+  <section class="view" id="view-recepti" aria-label="Рецепти" hidden>
+    <div class="search">
+      <label class="search-field"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="recSearch" type="search" placeholder="Търси рецепта: боб, пиле, сладко…" autocomplete="off" enterkeyhint="search" aria-label="Търсене на рецепта">
+      </label>
+    </div>
+    <div class="chips" id="recChips" role="group" aria-label="Групи рецепти"></div>
     <div id="recList"></div>
   </section>
 
-  <section class="view rules" id="view-pravila" hidden></section>
-</div>
+  <section class="view rules" id="view-pravila" aria-label="Правила" hidden></section>
+</main>
+
+<nav class="tabbar" aria-label="Раздели">
+  <div class="tabbar-in" role="tablist">
+    <button type="button" class="tab" role="tab" data-act="tab" data-view="dnevnik" aria-selected="true"><span class="tab-ico"><svg class="i" aria-hidden="true"><use href="#i-book"/></svg></span>Дневник</button>
+    <button type="button" class="tab" role="tab" data-act="tab" data-view="recepti" aria-selected="false"><span class="tab-ico"><svg class="i" aria-hidden="true"><use href="#i-chef"/></svg></span>Рецепти</button>
+    <button type="button" class="tab" role="tab" data-act="tab" data-view="pravila" aria-selected="false"><span class="tab-ico"><svg class="i" aria-hidden="true"><use href="#i-bulb"/></svg></span>Правила</button>
+  </div>
+</nav>
 
 <div class="sheet-wrap" id="picker" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pickTitle">
-    <div class="sheet-head"><h3 id="pickTitle">Добави</h3><button class="ghost small" data-act="close">Затвори</button></div>
-    <div class="sheet-body">
-      <div class="scan-row">
-        <label class="scan-btn" for="bcFile"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><rect x="2" y="4" width="2" height="16"/><rect x="6" y="4" width="1" height="16"/><rect x="9" y="4" width="2" height="16"/><rect x="13" y="4" width="1" height="16"/><rect x="16" y="4" width="3" height="16"/><rect x="21" y="4" width="1" height="16"/></svg>Сканирай баркод</label>
-        <input id="bcFile" class="sr-only" type="file" accept="image/*" capture="environment">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pickTitle" tabindex="-1">
+    <div class="sheet-head"><h3 id="pickTitle">Добави</h3><button type="button" class="close-btn" data-act="closeSheet" aria-label="Затвори"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-sub">
+      <div class="search">
+        <label class="search-field"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+          <input id="pickSearch" type="search" placeholder="Търси: боб, пиле, кисело мляко…" autocomplete="off" enterkeyhint="search" aria-label="Търсене">
+        </label>
+        <button type="button" class="sq-btn mic" id="micPick" aria-label="Търси с глас" aria-pressed="false" hidden><svg class="i" aria-hidden="true"><use href="#i-mic"/></svg></button>
+        <label class="sq-btn" for="bcFile" id="bcLabel" role="button" tabindex="0" aria-label="Сканирай баркод" title="Сканирай баркод"><svg class="i" aria-hidden="true"><use href="#i-barcode"/></svg></label>
+        <input id="bcFile" class="sr-only" type="file" accept="image/*" capture="environment" tabindex="-1">
       </div>
+      <div class="chips" id="pickChips" role="group" aria-label="Групи храни"></div>
+    </div>
+    <div class="sheet-body">
       <div class="bcpanel" id="bcPanel" hidden>
         <p id="bcMsg" class="status"></p>
         <div class="bc-manual"><input id="bcCode" inputmode="numeric" autocomplete="off" placeholder="или въведи цифрите под баркода" aria-label="Цифри на баркода"><button type="button" data-act="bcfind">Търси</button></div>
         <div class="bcnew" id="bcNew" hidden>
-          <p id="bcNewText"></p>
-          <button type="button" class="save" data-act="bcmanual" style="align-self:flex-start;padding:9px 14px">Въведи стойностите</button>
+          <p>Въведи стойностите от етикета (на 100 г). Следващия път този баркод ще се разпознае веднага.</p>
+          <button type="button" class="btn-sm" data-act="bcmanual">Въведи стойностите</button>
         </div>
       </div>
-      <div class="srow">
-  <input id="pickSearch" type="search" placeholder="Търси или кажи: боб, пиле, кисело мляко…" autocomplete="off" aria-label="Търсене">
-        <button type="button" class="mic" id="micPick" aria-label="Търси с глас" aria-pressed="false" hidden><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12z"/></svg></button>
-      </div>
-      <div class="chips" id="pickChips"></div>
-      <ul class="plist" id="pickList"></ul>
-      <details id="customBox">
-        <summary>Своя храна, която я няма в списъка</summary>
+      <ul class="flist" id="pickList"></ul>
+      <details id="customBox" class="custom">
+        <summary><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg><span>Своя храна, която я няма в списъка</span><svg class="i chev" aria-hidden="true"><use href="#i-chev-down"/></svg></summary>
         <form id="customForm" class="form-grid">
           <label class="field wide">Име<input id="cf-name" required placeholder="напр. Домашна пастърма"></label>
           <label class="field wide">Баркод (по желание)<input id="cf-code" inputmode="numeric" autocomplete="off" placeholder="за да се разпознава при сканиране"></label>
           <label class="field">Група<select id="cf-cat"></select></label>
-          <label class="field">Порция, г<input id="cf-por" type="number" inputmode="decimal" min="1" value="100"></label>
+          <label class="field">Порция, г<input id="cf-por" type="number" inputmode="decimal" min="1" step="any" value="100"></label>
           <label class="field">ккал на 100 г<input id="cf-k" type="number" inputmode="decimal" min="0" step="any" required></label>
-          <label class="field">Белтъчини на 100 г<input id="cf-p" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
-          <label class="field">Въглехидрати на 100 г<input id="cf-c" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
-          <label class="field">Мазнини на 100 г<input id="cf-f" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
-          <label class="field">Сол на 100 г<input id="cf-s" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
-          <button class="save wide" type="submit">Запази и добави</button>
+          <label class="field">Белтъчини, г<input id="cf-p" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
+          <label class="field">Въглехидрати, г<input id="cf-c" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
+          <label class="field">Мазнини, г<input id="cf-f" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
+          <label class="field">Сол, г<input id="cf-s" type="number" inputmode="decimal" min="0" step="any" value="0"></label>
+          <button class="btn btn-primary wide" type="submit"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg><span>Запази и добави</span></button>
         </form>
       </details>
     </div>
@@ -323,54 +655,60 @@ h1{font-family:var(--font-d);font-weight:600;font-size:1.12rem;letter-spacing:-.
 </div>
 
 <div class="sheet-wrap" id="recipeSheet" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="recTitle">
-    <div class="sheet-head"><h3 id="recTitle">Рецепта</h3><button class="ghost small" data-act="closeRecipe">Затвори</button></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="recTitle" tabindex="-1">
+    <div class="sheet-head"><h3 id="recTitle">Рецепта</h3><button type="button" class="close-btn" data-act="closeSheet" aria-label="Затвори"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div class="sheet-body recipe" id="recBody"></div>
+    <div class="sheet-foot" id="recFoot" hidden></div>
   </div>
 </div>
 
 <div class="sheet-wrap" id="chooser" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="chTitle">
-    <div class="sheet-head"><h3 id="chTitle">Добави към</h3><button class="ghost small" data-act="closeChooser">Затвори</button></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="chTitle" tabindex="-1">
+    <div class="sheet-head"><h3 id="chTitle">Добави към</h3><button type="button" class="close-btn" data-act="closeSheet" aria-label="Затвори"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div class="sheet-body" id="chBody"></div>
   </div>
 </div>
 
 <div class="sheet-wrap" id="settings" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
-    <div class="sheet-head"><h3 id="setTitle">Настройки и дневна цел</h3><button class="ghost small" data-act="close">Затвори</button></div>
-    <form class="sheet-body" id="setForm">
-      <div class="form-grid" style="margin-top:0">
-        <label class="field">Пол<select id="st-sex"><option value="m">Мъж</option><option value="f">Жена</option></select></label>
-        <label class="field">Възраст<input id="st-age" type="number" inputmode="numeric" min="18" max="100"></label>
-        <label class="field">Ръст, см<input id="st-height" type="number" inputmode="numeric" min="120" max="230"></label>
-        <label class="field">Тегло, кг<input id="st-weight" type="number" inputmode="decimal" min="35" max="250" step="any"></label>
-        <label class="field wide">Движение<select id="st-act">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setTitle" tabindex="-1">
+    <div class="sheet-head"><h3 id="setTitle">Настройки и дневна цел</h3><button type="button" class="close-btn" data-act="closeSheet" aria-label="Затвори"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <form class="sheet-form" id="setForm">
+      <div class="sheet-body">
+        <div class="sec-title">За теб</div>
+        <div class="form-grid">
+          <label class="field">Пол<select id="st-sex"><option value="m">Мъж</option><option value="f">Жена</option></select></label>
+          <label class="field">Възраст<input id="st-age" type="number" inputmode="numeric" min="18" max="100" required></label>
+          <label class="field">Ръст, см<input id="st-height" type="number" inputmode="numeric" min="120" max="230" required></label>
+          <label class="field">Тегло, кг<input id="st-weight" type="number" inputmode="decimal" min="35" max="250" step="any" required></label>
+        </div>
+        <div class="sec-title">Движение и цел</div>
+        <label class="field">Движение<select id="st-act">
           <option value="1.375">Леко — повечето време седи</option>
-          <option value="1.55">Умерено — 12-часови смени и около 10 000 крачки</option>
+          <option value="1.55">Умерено — 12-часови смени, ~10 000 крачки</option>
           <option value="1.725">Високо — тежка физическа работа</option>
         </select></label>
-        <label class="field wide">Цел<select id="st-goal">
+        <label class="field">Цел<select id="st-goal">
           <option value="0">Задържане на теглото</option>
           <option value="-300">Леко сваляне (−300 ккал на ден)</option>
           <option value="-500">Сваляне (−500 ккал на ден)</option>
         </select></label>
-        <label class="field wide">Или точна цел в ккал (по желание)<input id="st-manual" type="number" inputmode="numeric" min="1000" max="5000" placeholder="празно = сметни автоматично"></label>
+        <label class="field">Или точна цел в ккал (по желание)<input id="st-manual" type="number" inputmode="numeric" min="1000" max="5000" placeholder="празно = сметни автоматично"></label>
+        <div class="sec-title">Макроси, % от калориите</div>
+        <div class="form-grid g3">
+          <label class="field">Белтъчини<input id="st-pp" type="number" inputmode="numeric" min="5" max="60" required></label>
+          <label class="field">Въглехидр.<input id="st-cp" type="number" inputmode="numeric" min="5" max="80" required></label>
+          <label class="field">Мазнини<input id="st-fp" type="number" inputmode="numeric" min="5" max="60" required></label>
+        </div>
+        <p class="hint" id="macroHint"></p>
+        <label class="field">Сол на ден, г<input id="st-salt" type="number" inputmode="decimal" min="1" max="15" step="0.5" required></label>
+        <div class="calc" id="setCalc"></div>
       </div>
-      <div class="sec-title">Макроси, % от калориите</div>
-      <div class="form-grid" style="margin-top:0;grid-template-columns:repeat(3,1fr)">
-        <label class="field">Белтъчини<input id="st-pp" type="number" inputmode="numeric" min="5" max="60"></label>
-        <label class="field">Въглехидрати<input id="st-cp" type="number" inputmode="numeric" min="5" max="80"></label>
-        <label class="field">Мазнини<input id="st-fp" type="number" inputmode="numeric" min="5" max="60"></label>
-      </div>
-      <label class="field">Сол на ден, г<input id="st-salt" type="number" inputmode="decimal" min="1" max="15" step="0.5"></label>
-      <div class="calc" id="setCalc"></div>
-      <button class="save" type="submit">Запази</button>
+      <div class="sheet-foot"><button class="btn btn-primary btn-block" type="submit"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg><span>Запази</span></button></div>
     </form>
   </div>
 </div>
 
-<div class="toast" id="toast" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <script>
 /* ---------- Храни: [id, име, група, ккал, белтъчини, въглехидрати, мазнини, сол (всички на 100 г), порция г, флагове]
    Флагове: S = нужна е гарнитура, G = гарнитура/салата, V = салата за мезе, L = порцията се мени малко, N = не се предлага само */
@@ -1032,17 +1370,32 @@ const RULES = [
 ];
 /* ---------- Данни и запазване ---------- */
 const KEY = 'hranene-dnevnik-v1';
+const DEFAULT_SETTINGS = {sex:'m',age:55,height:175,weight:85,act:1.55,goal:0,manual:'',pp:20,cp:50,fp:30,salt:5,saved:false};
 function normalize(d){
   d = d && typeof d==='object' ? d : {};
-  d.settings = Object.assign({sex:'m',age:55,height:175,weight:85,act:1.55,goal:0,manual:'',pp:20,cp:50,fp:30,salt:5,saved:false}, d.settings||{});
-  d.days = d.days || {};
-  d.custom = Array.isArray(d.custom) ? d.custom : [];
-  d.favs = Array.isArray(d.favs) ? d.favs : [];
-  d.lastType = d.lastType || 'day';
+  d.settings = Object.assign({}, DEFAULT_SETTINGS, d.settings && typeof d.settings==='object' ? d.settings : {});
+  d.days = d.days && typeof d.days==='object' ? d.days : {};
+  Object.keys(d.days).forEach(k=>{
+    const day = d.days[k];
+    if(!day || typeof day!=='object'){ delete d.days[k]; return; }
+    if(!TYPES[day.type]) day.type = 'day';
+    if(!day.slots || typeof day.slots!=='object') day.slots = {};
+    Object.keys(day.slots).forEach(s=>{
+      const l = day.slots[s];
+      day.slots[s] = Array.isArray(l) ? l.filter(e=>e && typeof e.id==='string' && Number(e.g)>0).map(e=>({id:e.id, g:Number(e.g)})) : [];
+    });
+  });
+  d.custom = Array.isArray(d.custom) ? d.custom.filter(c=>c && c.id && c.name) : [];
+  d.favs = Array.isArray(d.favs) ? d.favs.filter(x=>typeof x==='string') : [];
+  d.lastType = TYPES[d.lastType] ? d.lastType : 'day';
   return d;
 }
 function load(){ try{ const s = localStorage.getItem(KEY); if(s) return normalize(JSON.parse(s)); }catch(e){} return normalize({}); }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){} }
+let saveWarned = false;
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(data)); }
+  catch(e){ if(!saveWarned){ saveWarned = true; setTimeout(()=>toast('Записът не можа да се запази — паметта на браузъра е пълна или забранена.'), 0); } }
+}
 let data = load();
 
 let FOOD = {};
@@ -1072,7 +1425,7 @@ function targets(){
   const s=data.settings; let k; const m=parseFloat(s.manual);
   if(m>0) k=m;
   else { const bmr = 10*s.weight + 6.25*s.height - 5*s.age + (s.sex==='m'?5:-161); k = bmr*Number(s.act) + Number(s.goal); }
-  k = Math.round(k/10)*10;
+  k = Math.max(800, Math.round(k/10)*10);
   const sum = (Number(s.pp)+Number(s.cp)+Number(s.fp)) || 100;
   return {k, p:k*s.pp/sum/4, c:k*s.cp/sum/4, f:k*s.fp/sum/9, s:Number(s.salt)};
 }
@@ -1138,69 +1491,122 @@ function suggest(sl, tgt, day, seed){
 function keyOf(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function parseKey(k){ const a=k.split('-').map(Number); return new Date(a[0],a[1]-1,a[2]); }
 function shiftKey(k,n){ const d=parseKey(k); d.setDate(d.getDate()+n); return keyOf(d); }
-const TODAY = keyOf(new Date());
+let TODAY = keyOf(new Date());
 let cur = TODAY;
 function getDay(k){ return data.days[k] || {type:data.lastType, slots:{}}; }
 function ensureDay(k){ if(!data.days[k]) data.days[k]={type:data.lastType, slots:{}}; return data.days[k]; }
+const hasEntries = day=>!!day && Object.values(day.slots||{}).some(l=>l && l.length);
+function refreshToday(){
+  const t = keyOf(new Date());
+  if(t===TODAY) return;
+  if(cur===TODAY) cur = t;
+  TODAY = t; render();
+}
 
-/* ---------- Изглед ---------- */
+/* ---------- Помощни за изгледа ---------- */
 const $ = id=>document.getElementById(id);
 const esc = s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = n=>Math.round(n).toLocaleString('bg-BG');
 const r0 = n=>Math.round(n);
 const s1 = n=>(Math.round(n*10)/10).toFixed(1).replace('.',',');
 const pct = (a,b)=>b>0?clamp(a/b*100,0,100):0;
+const cap = s=>s ? s.charAt(0).toUpperCase()+s.slice(1) : s;
+const norm = s=>String(s).toLowerCase().replace(/[„“”"«»().,]/g,' ').replace(/\s+/g,' ').trim();
+const matches = (name,q)=>{ const n=norm(name); return norm(q).split(' ').every(w=>n.includes(w)); };
 const hasRec = id=>!!REC[id];
 const unit = f=>f && f.D ? 'мл' : 'г';
 const WARN = 'Не препоръчвам, шефе';
+const ico = (n,cls)=>`<svg class="i${cls?' '+cls:''}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const isFav = id=>data.favs.includes(id);
-const starBtn = id=>`<button type="button" class="star ${isFav(id)?'on':''}" data-act="fav" data-id="${esc(id)}" aria-pressed="${isFav(id)}" aria-label="${isFav(id)?'Махни от любими':'Добави в любими'}">${isFav(id)?'★':'☆'}</button>`;
+const starBtn = id=>`<button type="button" class="ibtn star${isFav(id)?' on':''}" data-act="fav" data-id="${esc(id)}" aria-pressed="${isFav(id)}" aria-label="${isFav(id)?'Махни от любими':'Добави в любими'}">${ico('star')}</button>`;
 function toggleFav(id){ data.favs = isFav(id) ? data.favs.filter(x=>x!==id) : data.favs.concat([id]); save(); }
-const warnTag = f=>f && f.X ? `<span class="warn-tag">${WARN}</span>` : '';
+const warnTag = f=>f && f.X ? `<span class="warn-tag">${ico('alert')}${WARN}</span>` : '';
+const warnBig = f=>f && f.X ? `<p class="warn-big">${ico('alert')}<span>${WARN}</span></p>` : '';
+
+const SLOT_UI = {zak:['sun','amber'], s1:['apple','green'], s2:['apple','green'], obqd:['utensils','orange'], vech:['moon','indigo'], sla:['cookie','pink'],
+  parvo:['sun','amber'], predi:['utensils','orange'], smqna:['briefcase','teal'], nosht:['apple','green'], sutrin:['coffee','brown']};
+const slotUI = id=>SLOT_UI[id] || ['utensils','slate'];
+const CAT_UI = {zak:['sun','amber'], sup:['soup','orange'], osn:['utensils','orange'], ska:['flame','red'], gar:['salad','green'], bez:['leaf','teal'],
+  sna:['apple','green'], sla:['cookie','pink'], mez:['wine','indigo'], nap:['coffee','brown'], pro:['egg','slate']};
+const catUI = c=>CAT_UI[c] || ['utensils','slate'];
+const TYPE_UI = {day:'sun', night:'moon', rest:'house'};
+const VIEW_TITLES = {dnevnik:'Дневник', recepti:'Рецепти', pravila:'Правила и съвети'};
+const badge = ([icon,color], extra)=>`<span class="badge-ico c-${color}">${extra!=null?extra:ico(icon)}</span>`;
+
 const seeds = {};
 let lastPicks = {};
 let view = 'dnevnik';
+let flash = null;      // наскоро добавени записи — за кратко осветяване
+let shuffled = null;   // хранене с нови предложения — за анимация
 
 function nameBtn(f){
   return hasRec(f.id)
     ? `<button type="button" class="namebtn has-rec" data-act="recipe" data-id="${esc(f.id)}">${esc(f.name)}</button>`
     : `<span class="namebtn">${esc(f.name)}</span>`;
 }
+function macroLine(n){ return `<b>${fmt(n.k)} ккал</b> · <span class="mp">Б ${r0(n.p)}</span> · <span class="mc">В ${r0(n.c)}</span> · <span class="mf">М ${r0(n.f)}</span> г · сол ${s1(n.s)} г`; }
 
+/* ---------- Изглед ---------- */
 function render(){
-  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.view===view)));
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.view===view)));
   ['dnevnik','recepti','pravila'].forEach(v=>{ $('view-'+v).hidden = v!==view; });
+  $('viewTitle').textContent = VIEW_TITLES[view];
+  $('todayBtn').hidden = view!=='dnevnik' || cur===TODAY;
   if(view==='dnevnik') renderLog();
   else if(view==='recepti') renderRecipes();
   else renderRules();
 }
 
+function renderDate(){
+  const d = parseKey(cur);
+  const sameYear = d.getFullYear()===new Date().getFullYear();
+  const dm = d.toLocaleDateString('bg-BG', sameYear ? {day:'numeric',month:'long'} : {day:'numeric',month:'long',year:'numeric'});
+  const wd = d.toLocaleDateString('bg-BG',{weekday:'long'});
+  let main = cap(wd), sub = dm;
+  if(cur===TODAY) main = 'Днес';
+  else if(cur===shiftKey(TODAY,-1)) main = 'Вчера';
+  else if(cur===shiftKey(TODAY,1)) main = 'Утре';
+  if(main!==cap(wd)) sub = wd+', '+dm;
+  $('dateMain').textContent = main;
+  $('dateSub').textContent = sub;
+  $('datePick').value = cur;
+}
+
+function setMacro(id, v, tg, isSalt){
+  const el = $('m-'+id);
+  el.classList.toggle('over', !isSalt && v>tg*1.1);
+  el.classList.toggle('bad', !!isSalt && v>tg);
+  el.querySelector('.v').textContent = isSalt ? `${s1(v)} / ${s1(tg)} г` : `${r0(v)} / ${r0(tg)} г`;
+  el.querySelector('.mbar i').style.width = pct(v,tg)+'%';
+}
+function renderSummary(ctx){
+  const T=ctx.T, t=ctx.tot, left=T.k-t.k, over=left<0;
+  $('kLeft').textContent = over ? '+'+fmt(-left) : fmt(left);
+  $('kLeftCap').textContent = over ? 'ккал над целта' : 'ккал остават';
+  $('kEaten').textContent = fmt(t.k);
+  $('kGoal').textContent = fmt(T.k);
+  const C = 326.73, frac = T.k>0 ? Math.min(t.k/T.k,1) : 0;
+  $('ringFill').style.strokeDashoffset = String(C*(1-frac));
+  $('ring').classList.toggle('over', over);
+  $('ring').classList.toggle('zero', frac<.005);
+  setMacro('prot', t.p, T.p); setMacro('carb', t.c, T.c); setMacro('fat', t.f, T.f); setMacro('salt', t.s, T.s, true);
+  const remSlots = ctx.empty.map(s=>s.name.toLowerCase());
+  const rem = $('remain');
+  rem.hidden = !(remSlots.length && left>0 && t.k>0);
+  rem.textContent = rem.hidden ? '' : 'Остатъкът се разпределя за: '+remSlots.join(', ')+'.';
+}
+
 function renderLog(){
   const day = getDay(cur);
-  const d = parseKey(cur);
-  let lbl = d.toLocaleDateString('bg-BG',{weekday:'short',day:'numeric',month:'long'});
-  if(cur===TODAY) lbl = 'Днес, '+lbl; else if(cur===shiftKey(TODAY,-1)) lbl='Вчера, '+lbl;
-  $('dateLabel').textContent = lbl;
-  $('typeSeg').innerHTML = Object.entries(TYPES).map(([k,t])=>`<button data-act="type" data-type="${k}" aria-pressed="${day.type===k}">${t.label}</button>`).join('');
-  $('typeTip').textContent = TYPES[day.type].tip;
-  $('banner').innerHTML = data.settings.saved ? '' : `<div class="banner"><span>Целта е сметната за примерни данни (мъж, 55 г., 175 см, 85 кг). Въведи истинските в Настройки.</span><button data-act="settings">Въведи</button></div>`;
+  renderDate();
+  const types = Object.keys(TYPES);
+  $('typeSeg').style.setProperty('--i', String(Math.max(0, types.indexOf(day.type))));
+  $('typeSeg').innerHTML = types.map(k=>`<button type="button" data-act="type" data-type="${k}" aria-pressed="${day.type===k}">${ico(TYPE_UI[k])}<span>${TYPES[k].label}</span></button>`).join('');
+  $('typeTip').innerHTML = ico('clock')+'<span>'+esc(TYPES[day.type].tip)+'</span>';
+  $('banner').innerHTML = data.settings.saved ? '' : `<div class="banner">${ico('info')}<span>Целта е сметната за примерни данни (мъж, 55 г., 175 см, 85 кг). Въведи своите в Настройки.</span><button type="button" class="btn-sm" data-act="settings">Въведи</button></div>`;
 
   const ctx = context(day);
-  const T=ctx.T, t=ctx.tot, left=T.k-t.k;
-  const macro = (cls,label,v,tg,isSalt)=>{
-    const over = v>tg*1.1; const state = isSalt ? (v>tg?'bad':'') : (over?'warn':'');
-    const val = isSalt ? `${s1(v)} / ${s1(tg)} г` : `${r0(v)} / ${r0(tg)} г`;
-    return `<div class="macro ${cls} ${state}"><div class="mrow"><span>${label}</span><span>${val}</span></div><div class="bar"><span style="width:${pct(v,tg)}%"></span></div></div>`;
-  };
-  const remSlots = ctx.empty.map(s=>s.name.toLowerCase());
-  $('summary').innerHTML = `
-    <div class="sum-top">
-      <div><div class="big ${left<0?'over':''}">${left>=0?fmt(left):'+'+fmt(-left)}</div><div class="big-cap">${left>=0?'ккал остават за деня':'ккал над целта'}</div></div>
-      <div class="sum-side">изядени <b>${fmt(t.k)}</b><br>цел <b>${fmt(T.k)}</b> ккал</div>
-    </div>
-    <div class="bar ${left<0?'over':''}"><span style="width:${pct(t.k,T.k)}%"></span></div>
-    <div class="macros">${macro('prot','Белтъчини',t.p,T.p)}${macro('carb','Въглехидрати',t.c,T.c)}${macro('fat','Мазнини',t.f,T.f)}${macro('salt','Сол',t.s,T.s,true)}</div>
-    ${remSlots.length && left>0 ? `<p class="remain">Остатъкът се разпределя за: ${esc(remSlots.join(', '))}.</p>` : ''}`;
+  renderSummary(ctx);
 
   lastPicks = {};
   const typeSlots = TYPES[day.type].slots;
@@ -1210,6 +1616,7 @@ function renderLog(){
     html += slotHTML({id, name:(SLOTNAME[id]||'Друго'), time:'от друг тип ден', share:0, cats:[]}, day, ctx, true);
   });
   $('slots').innerHTML = html;
+  flash = null; shuffled = null;
 }
 
 function slotHTML(sl, day, ctx, orphan){
@@ -1218,114 +1625,229 @@ function slotHTML(sl, day, ctx, orphan){
   let body, kTxt;
   if(list.length){
     body = '<ul class="items">'+list.map((e,i)=>itemHTML(sl.id,e,i)).join('')+'</ul>';
-    kTxt = `${fmt(tot.k)} ккал`;
+    kTxt = `${fmt(tot.k)}<small>ккал</small>`;
   } else {
     const tgt = ctx.tgt(sl);
-    kTxt = `~${fmt(tgt.k)} ккал`;
+    kTxt = `~${fmt(tgt.k)}<small>ккал цел</small>`;
     body = suggestHTML(sl, tgt, day);
   }
-  return `<section class="slot ${list.length?'filled':'empty'} ${orphan?'orphan':''}">
-    <header><div><h2>${esc(sl.name)}</h2><span class="time">${esc(sl.time)}</span></div><span class="slot-k">${kTxt}</span></header>
+  return `<section class="slot ${list.length?'filled':'empty'}${orphan?' orphan':''}" aria-label="${esc(sl.name)}">
+    <header class="slot-head">${badge(slotUI(sl.id))}<div class="slot-title"><h2>${esc(sl.name)}</h2><span class="time">${esc(sl.time)}</span></div><span class="slot-k">${kTxt}</span></header>
     ${body}
-    <button class="add" data-act="pick" data-slot="${sl.id}">+ Добави ястие или продукт</button>
+    <button type="button" class="add" data-act="pick" data-slot="${esc(sl.id)}">${ico('plus')}Добави храна</button>
   </section>`;
 }
-function macroLine(n){ return `<b class="kc">${fmt(n.k)} ккал</b> · Б ${r0(n.p)} · В ${r0(n.c)} · М ${r0(n.f)} г · сол ${s1(n.s)} г`; }
 function itemHTML(slot,e,i){
-  const f = FOOD[e.id]; if(!f) return '';
+  const f = FOOD[e.id];
+  const isNew = flash && flash.slot===slot && i>=flash.from;
+  const rm = name=>`<button type="button" class="ibtn" data-act="remove" data-slot="${esc(slot)}" data-i="${i}" aria-label="Махни ${esc(name)}">${ico('x')}</button>`;
+  if(!f) return `<li class="item"><div class="item-top"><div class="item-name"><span class="namebtn">Изтрита храна</span></div>${rm('изтритата храна')}</div></li>`;
   const n = nut(f,e.g);
-  return `<li class="item">
-    <div class="item-main"><div class="namerow">${starBtn(f.id)}${nameBtn(f)}</div>${warnTag(f)}<span class="item-macros">${macroLine(n)}</span></div>
-    <div class="grams">
-      <button data-act="minus" data-slot="${slot}" data-i="${i}" aria-label="По-малко грама">−</button>
-      <input id="g-${slot}-${i}" type="number" inputmode="numeric" min="0" step="5" value="${e.g}" data-act="grams" data-slot="${slot}" data-i="${i}" aria-label="Количество на ${esc(f.name)}">
-      <span class="unit">${unit(f)}</span>
-      <button data-act="plus" data-slot="${slot}" data-i="${i}" aria-label="Повече грама">+</button>
-      <button class="x" data-act="remove" data-slot="${slot}" data-i="${i}" aria-label="Махни ${esc(f.name)}">×</button>
+  return `<li class="item${isNew?' new':''}">
+    <div class="item-top"><div class="item-name">${nameBtn(f)}${warnTag(f)}</div>${rm(f.name)}</div>
+    <div class="item-bottom">
+      <span class="macro-line">${macroLine(n)}</span>
+      <div class="stepper">
+        <button type="button" data-act="minus" data-slot="${esc(slot)}" data-i="${i}" aria-label="По-малко">${ico('minus')}</button>
+        <input type="number" inputmode="numeric" min="1" step="5" value="${e.g}" data-act="grams" data-slot="${esc(slot)}" data-i="${i}" aria-label="Количество ${esc(f.name)} в ${unit(f)}">
+        <span class="unit">${unit(f)}</span>
+        <button type="button" data-act="plus" data-slot="${esc(slot)}" data-i="${i}" aria-label="Повече">${ico('plus')}</button>
+      </div>
     </div>
   </li>`;
 }
 function suggestHTML(sl, tgt, day){
-  if(tgt.k < 60) return `<p class="done">Калориите за деня са изпълнени. Ако все пак е гладен: зеленчуци, чай или кисело мляко.</p>`;
+  if(tgt.k < 60) return `<p class="done">${ico('check')}<span>Калориите за деня са изпълнени. Ако все пак е гладен: зеленчуци, чай или кисело мляко.</span></p>`;
   const picks = suggest(sl, tgt, day, seeds[sl.id]||0);
   lastPicks[sl.id] = picks;
   if(!picks.length) return '';
-  return `<div class="sugg"><div class="sugg-head"><span>Предложения, които влизат в целта</span><button class="link" data-act="shuffle" data-slot="${sl.id}">Други</button></div>` +
+  return `<div class="sugg${shuffled===sl.id?' fresh':''}"><div class="sugg-head"><span>Предложения</span><button type="button" class="link" data-act="shuffle" data-slot="${esc(sl.id)}">${ico('refresh')}Други</button></div>` +
     picks.map((p,j)=>{ const t=sumEntries(p.entries);
-      return `<div class="sug"><div class="sug-text"><span class="sug-name">${p.entries.map(e=>nameBtn(FOOD[e.id])+' <span class="g">'+e.g+' '+unit(FOOD[e.id])+'</span>').join(' + ')}</span><span class="item-macros">${macroLine(t)}</span></div><button class="btn-add" data-act="take" data-slot="${sl.id}" data-j="${j}">Добави</button></div>`;
+      const names = p.entries.map(e=>nameBtn(FOOD[e.id])+` <span class="g">${e.g} ${unit(FOOD[e.id])}</span>`).join(' <span class="sep">+</span> ');
+      return `<div class="sug"><div class="sug-text"><span class="sug-name">${names}</span><span class="macro-line">${macroLine(t)}</span></div><button type="button" class="btn-add" data-act="take" data-slot="${esc(sl.id)}" data-j="${j}">${ico('plus')}Добави</button></div>`;
     }).join('') + '</div>';
 }
 
 /* ---------- Рецепти ---------- */
+const REC_ORDER = ['zak','sup','osn','ska','gar','bez','sna','sla','mez'];
+let recCat = 'all';
 function renderRecipes(){
-  const q = $('recSearch').value.trim().toLowerCase();
-  const order = ['zak','sup','osn','ska','gar','bez','sna','sla','mez'];
-  let html='';
-  const favList = allFoods().filter(f=>isFav(f.id) && hasRec(f.id) && (!q || f.name.toLowerCase().includes(q)));
-  if(favList.length) html += `<div class="rgroup"><h3>★ Любими</h3><ul class="rlist">${favList.map(recRow).join('')}</ul></div>`;
-  order.forEach(cat=>{
-    const list = allFoods().filter(f=>f.cat===cat && hasRec(f.id) && (!q || f.name.toLowerCase().includes(q)));
-    if(!list.length) return;
-    list.sort((a,b)=>a.name.localeCompare(b.name,'bg'));
-    html += `<div class="rgroup"><h3>${CATS[cat]}</h3><ul class="rlist">${list.map(recRow).join('')}</ul></div>`;
-  });
-  $('recList').innerHTML = html || '<p class="tip">Няма рецепта с такова име.</p>';
+  const q = $('recSearch').value.trim();
+  const withRec = allFoods().filter(f=>hasRec(f.id));
+  const favs = withRec.filter(f=>isFav(f.id));
+  if(recCat==='fav' && !favs.length) recCat = 'all';
+  const chips = [['all','Всички']].concat(favs.length?[['fav','★ Любими']]:[]).concat(REC_ORDER.filter(c=>withRec.some(f=>f.cat===c)).map(c=>[c,CATS[c]]));
+  $('recChips').innerHTML = chips.map(([k,v])=>`<button type="button" class="chip" data-act="recCat" data-cat="${k}" aria-pressed="${!q && recCat===k}">${esc(v)}</button>`).join('');
+  const byName = (a,b)=>a.name.localeCompare(b.name,'bg');
+  let html = '';
+  const group = (title,list)=>{ if(list.length) html += `<div class="rgroup"><h3>${esc(title)}</h3><ul class="rlist">${list.map(recRow).join('')}</ul></div>`; };
+  if(q){
+    const list = withRec.filter(f=>matches(f.name,q));
+    REC_ORDER.forEach(c=>group(CATS[c], list.filter(f=>f.cat===c).sort(byName)));
+  } else if(recCat==='fav'){
+    group('Любими', favs.slice().sort(byName));
+  } else if(recCat!=='all'){
+    group(CATS[recCat], withRec.filter(f=>f.cat===recCat).sort(byName));
+  } else {
+    group('★ Любими', favs.slice().sort(byName));
+    REC_ORDER.forEach(c=>group(CATS[c], withRec.filter(f=>f.cat===c).sort(byName)));
+  }
+  $('recList').innerHTML = html || `<p class="empty-list">Няма рецепта с такова име.</p>`;
 }
-function recRow(f){ const r=REC[f.id]; const meta=[r[0],r[1]].filter(Boolean).join(' · ') || 'как да се вмести';
-  return `<li style="display:flex;align-items:center;padding-right:8px"><button type="button" style="flex:1;min-width:0" data-act="recipe" data-id="${esc(f.id)}"><span><span class="pname">${esc(f.name)}</span>${f.X?`<span class="warn-tag" style="display:block">${WARN}</span>`:''}<span class="rmeta">${esc(meta)}</span></span><span class="chev" aria-hidden="true">›</span></button>${starBtn(f.id)}</li>`; }
+function recRow(f){
+  const r = REC[f.id];
+  const meta = [r[0],r[1]].filter(Boolean).join(' · ') || 'Съвет как да се вмести';
+  return `<li class="rrow"><button type="button" class="rbtn" data-act="recipe" data-id="${esc(f.id)}">${badge(catUI(f.cat))}<span class="rtext"><span class="fname">${esc(f.name)}</span>${warnTag(f)}<span class="fmeta">${esc(meta)}</span></span>${ico('chev-right','chev')}</button>${starBtn(f.id)}</li>`;
+}
 let recFromSlot = null, recOpenId = null;
 function openRecipe(id, fromSlot){
   const f = FOOD[id], r = REC[id]; if(!f || !r) return;
+  const same = recOpenId===id && isOpen('recipeSheet');
   recFromSlot = fromSlot || null; recOpenId = id;
   const [y,t,ing,steps,note] = r;
   const n = nut(f,f.por);
   $('recTitle').textContent = f.name;
+  const got = same ? [...$('recBody').querySelectorAll('.ing li')].map(li=>li.classList.contains('got')) : [];
   let html = '';
-  const badges = [y && 'Количество: '+y, t && 'Време: '+t].filter(Boolean);
-  if(badges.length) html += `<div class="rbadges">${badges.map(b=>`<span class="rbadge">${esc(b)}</span>`).join('')}</div>`;
-  html += `<button type="button" class="favbtn ${isFav(id)?'on':''}" data-act="fav" data-id="${esc(id)}">${isFav(id)?'★ В любими':'☆ Добави в любими'}</button>`;
-  if(f.X) html += `<p class="warn-tag" style="font-size:1rem;margin:0">${WARN}</p>`;
-  html += `<p class="rnut">1 порция в дневника: ${f.por} ${unit(f)} · ${fmt(n.k)} ккал · Б ${r0(n.p)} · В ${r0(n.c)} · М ${r0(n.f)} г · сол ${s1(n.s)} г</p>`;
-  if(ing && ing.length) html += `<h4>Продукти</h4><ul>${ing.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;
-  if(steps && steps.length) html += `<h4>Приготвяне</h4><ol>${steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`;
-  if(note) html += `<p class="rnote">${esc(note)}</p>`;
-  if(recFromSlot) html += `<button class="save" type="button" data-act="recAdd" data-id="${esc(id)}">Добави към: ${esc(slotDef(recFromSlot).name)}</button>`;
+  const badges = [y && [ 'utensils', y ], t && [ 'clock', t ]].filter(Boolean);
+  if(badges.length) html += `<div class="rbadges">${badges.map(([ic,txt])=>`<span class="rbadge">${ico(ic)}${esc(txt)}</span>`).join('')}</div>`;
+  html += warnBig(f);
+  html += `<div class="nutgrid"><div class="nut"><b>${fmt(n.k)}</b><span>ккал</span></div><div class="nut p"><b>${r0(n.p)} г</b><span>белтъчини</span></div><div class="nut c"><b>${r0(n.c)} г</b><span>въглехидр.</span></div><div class="nut f"><b>${r0(n.f)} г</b><span>мазнини</span></div></div>`;
+  html += `<p class="fmeta">За 1 порция в дневника: ${f.por} ${unit(f)} · сол ${s1(n.s)} г</p>`;
+  html += `<div class="row-btns"><button type="button" class="btn btn-soft favbtn${isFav(id)?' on':''}" data-act="fav" data-id="${esc(id)}" aria-pressed="${isFav(id)}">${ico('star')}<span>${isFav(id)?'В любими':'Добави в любими'}</span></button></div>`;
+  if(ing && ing.length) html += `<h4>Продукти <small>— докосни, за да отметнеш</small></h4><ul class="ing">${ing.map((x,k)=>`<li class="${got[k]?'got':''}">${esc(x)}</li>`).join('')}</ul>`;
+  if(steps && steps.length) html += `<h4>Приготвяне</h4><ol class="steps">${steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`;
+  if(note) html += `<div class="rnote">${ico('bulb')}<p>${esc(note)}</p></div>`;
+  const scroll = same ? $('recBody').scrollTop : 0;
   $('recBody').innerHTML = html;
-  $('recipeSheet').hidden = false;
-  $('recBody').scrollTop = 0;
+  const foot = $('recFoot');
+  foot.hidden = !recFromSlot;
+  foot.innerHTML = recFromSlot ? `<button class="btn btn-primary btn-block" type="button" data-act="recAdd" data-id="${esc(id)}">${ico('plus')}<span>Добави към: ${esc(slotDef(recFromSlot).name)}</span></button>` : '';
+  openSheet('recipeSheet');
+  $('recBody').scrollTop = scroll;
 }
 
 /* ---------- Правила ---------- */
 let rulesBuilt = false;
+const RULE_COLORS = ['green','amber','indigo','pink','orange','teal','red','blue','brown','green','teal'];
 function renderRules(){
   if(rulesBuilt) return;
-  $('view-pravila').innerHTML = RULES.map(s=>`<details ${s.open?'open':''}><summary>${esc(s.t)}</summary><div class="rbody">${s.h}</div></details>`).join('');
+  $('view-pravila').innerHTML = `<p class="lead">Кратки правила за хранене при смени 2/2/2 — сол, чиния, сладко, скара и сън.</p>` +
+    RULES.map((s,i)=>`<details ${s.open?'open':''}><summary>${badge(['',RULE_COLORS[i%RULE_COLORS.length]], String(i+1))}<span class="rt">${esc(s.t)}</span>${ico('chev-down','chev')}</summary><div class="rbody">${s.h.replace(/<table class="swap">/g,'<div class="swap-wrap"><table class="swap">').replace(/<\/table>/g,'</table></div>')}</div></details>`).join('');
   rulesBuilt = true;
 }
 
-/* ---------- Действия ---------- */
-function toast(msg){ const t=$('toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>{t.hidden=true},2600); }
-function addEntries(slot, entries){
-  const day = ensureDay(cur);
-  day.slots[slot] = (day.slots[slot]||[]).concat(entries.map(e=>({id:e.id,g:e.g})));
+/* ---------- Прозорци отдолу ---------- */
+const REDUCED = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : {matches:false};
+const sheetStack = [];
+const focusBack = [];
+const isOpen = id=>sheetStack.includes(id);
+function openSheet(id){
+  if(isOpen(id)) return;
+  if(!$('toast').hidden) hideToast();
+  const w = $(id), sh = w.querySelector('.sheet');
+  clearTimeout(w._t); w.classList.remove('closing'); sh.style.transform=''; sh.style.transition='';
+  focusBack.push(document.activeElement);
+  sheetStack.push(id);
+  w.style.zIndex = String(40 + sheetStack.length);
+  w.hidden = false;
+  document.body.classList.add('locked');
+  try{ history.pushState({sheet:id}, ''); }catch(e){}
+  requestAnimationFrame(()=>{ try{ sh.focus({preventScroll:true}); }catch(e){} });
+}
+function hideSheet(id){
+  const i = sheetStack.indexOf(id); if(i<0) return;
+  sheetStack.splice(i,1);
+  const w = $(id), sh = w.querySelector('.sheet');
+  w.classList.add('closing');
+  clearTimeout(w._t);
+  w._t = setTimeout(()=>{ w.hidden = true; w.classList.remove('closing'); sh.style.transform=''; sh.style.transition=''; }, REDUCED.matches ? 0 : 220);
+  if(!sheetStack.length) document.body.classList.remove('locked');
+  if(activeRec){ try{ activeRec.stop(); }catch(e){} }
+  const f = focusBack.pop();
+  if(f && f.focus && document.contains(f) && f!==document.body){ try{ f.focus({preventScroll:true}); }catch(e){} }
+}
+// Бутонът „Назад“ на телефона затваря горния прозорец, вместо да излиза от приложението.
+function closeTop(){
+  if(!sheetStack.length) return;
+  if(history.state && history.state.sheet) history.back();
+  else hideSheet(sheetStack[sheetStack.length-1]);
+}
+function closeAllSheets(){
+  const n = sheetStack.length; if(!n) return;
+  sheetStack.slice().reverse().forEach(hideSheet);
+  if(history.state && history.state.sheet){ try{ history.go(-n); }catch(e){} }
+}
+window.addEventListener('popstate', ()=>{ if(sheetStack.length) hideSheet(sheetStack[sheetStack.length-1]); });
+try{ if(history.state && history.state.sheet) history.replaceState(null,''); }catch(e){}
+document.querySelectorAll('.sheet-wrap').forEach(w=>{
+  w.addEventListener('click', ev=>{ if(ev.target===w && sheetStack[sheetStack.length-1]===w.id) closeTop(); });
+  // плъзгане надолу за затваряне
+  const sh = w.querySelector('.sheet'), head = w.querySelector('.sheet-head');
+  let y0 = null, dy = 0;
+  head.addEventListener('touchstart', ev=>{ if(ev.target.closest('button')) return; y0 = ev.touches[0].clientY; dy = 0; sh.style.transition = 'none'; }, {passive:true});
+  head.addEventListener('touchmove', ev=>{ if(y0===null) return; dy = Math.max(0, ev.touches[0].clientY - y0); sh.style.transform = `translateY(${dy}px)`; }, {passive:true});
+  const end = ()=>{
+    if(y0===null) return; y0 = null;
+    if(dy > 90){ sh.style.transition=''; closeTop(); }
+    else { sh.style.transition = 'transform .25s cubic-bezier(.2,.8,.2,1)'; sh.style.transform = ''; }
+  };
+  head.addEventListener('touchend', end); head.addEventListener('touchcancel', end);
+});
+
+/* ---------- Известие с „Върни“ ---------- */
+let undoFn = null;
+function toast(msg, undo){
+  const t = $('toast');
+  t.innerHTML = ico('check')+'<span></span>'+(undo?'<button type="button" class="toast-btn" data-act="undo">Върни</button>':'');
+  t.querySelector('span').textContent = msg;
+  undoFn = undo || null;
+  t.hidden = false;
+  t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+  clearTimeout(toast._t); toast._t = setTimeout(hideToast, undo ? 6000 : 2600);
+}
+function hideToast(){ $('toast').hidden = true; undoFn = null; }
+// Променя деня и позволява да се върне назад с един бутон.
+function changeDay(msg, mutate, key){
+  key = key || cur;
+  const before = data.days[key] ? JSON.parse(JSON.stringify(data.days[key])) : null;
+  const res = mutate();
+  if(res===false) return null;
   save(); render();
+  const undo = ()=>{ if(before) data.days[key] = before; else delete data.days[key]; save(); render(); };
+  if(msg) toast(msg, undo);
+  return undo;
+}
+
+/* ---------- Действия ---------- */
+function addEntries(slot, entries, msg){
+  changeDay(msg, ()=>{
+    const day = ensureDay(cur);
+    const l = day.slots[slot] || [];
+    flash = {slot, from:l.length};
+    day.slots[slot] = l.concat(entries.map(e=>({id:e.id,g:e.g})));
+  });
 }
 function autofill(){
-  const day = ensureDay(cur);
-  let added=0;
-  for(const sl of TYPES[day.type].slots){
-    if((day.slots[sl.id]||[]).length) continue;
-    const ctx = context(day); const tgt = ctx.tgt(sl);
-    if(tgt.k<60) continue;
-    const picks = suggest(sl, tgt, day, seeds[sl.id]||0);
-    if(picks.length){ day.slots[sl.id] = picks[0].entries.map(e=>({id:e.id,g:e.g})); added++; }
-  }
-  save(); render();
-  toast(added ? 'Денят е попълнен — смени каквото не му харесва.' : 'Няма празни хранения за попълване.');
+  let added = 0;
+  const undo = changeDay(null, ()=>{
+    const day = ensureDay(cur);
+    for(const sl of TYPES[day.type].slots){
+      if((day.slots[sl.id]||[]).length) continue;
+      const ctx = context(day); const tgt = ctx.tgt(sl);
+      if(tgt.k<60) continue;
+      const picks = suggest(sl, tgt, day, seeds[sl.id]||0);
+      if(picks.length){ day.slots[sl.id] = picks[0].entries.map(e=>({id:e.id,g:e.g})); added++; }
+    }
+    if(!added) return false;
+  });
+  if(!added) toast('Няма празни хранения за попълване.');
+  else toast('Денят е попълнен — смени каквото не ти харесва.', undo);
 }
 function changeGrams(slot,i,g){
   const day = ensureDay(cur); const l = day.slots[slot]; if(!l||!l[i]) return;
-  if(!(g>0)){ l.splice(i,1); } else l[i].g = Math.min(Math.round(g),3000);
+  if(!(g>0)){ render(); return; }   // празно или 0 → връща старото число
+  l[i].g = Math.min(Math.round(g),3000);
   save(); render();
 }
 function setView(v){
@@ -1333,9 +1855,14 @@ function setView(v){
   try{ if(location.hash.slice(1)!==view) history.replaceState(null,'','#'+view); }catch(e){}
   render(); window.scrollTo(0,0);
 }
-let clearArmed = 0;
+function addFood(slot, f){
+  if(!f || !slot) return;
+  addEntries(slot, [{id:f.id,g:f.por}], 'Добавено: '+f.name+' → '+slotDef(slot).name);
+}
 
 document.addEventListener('click', ev=>{
+  const ingLi = ev.target.closest('.ing li');
+  if(ingLi){ ingLi.classList.toggle('got'); return; }
   const el = ev.target.closest('[data-act]'); if(!el) return;
   const act = el.dataset.act, slot = el.dataset.slot, i = Number(el.dataset.i);
   if(act==='grams') return;
@@ -1344,66 +1871,80 @@ document.addEventListener('click', ev=>{
   else if(act==='next'){ cur=shiftKey(cur,1); render(); }
   else if(act==='today'){ cur=TODAY; render(); }
   else if(act==='type'){ const day=ensureDay(cur); day.type=el.dataset.type; data.lastType=day.type; save(); render(); }
-  else if(act==='take'){ const p=(lastPicks[slot]||[])[Number(el.dataset.j)]; if(p) addEntries(slot,p.entries); }
-  else if(act==='shuffle'){ seeds[slot]=(seeds[slot]||0)+1; render(); }
+  else if(act==='take'){ const p=(lastPicks[slot]||[])[Number(el.dataset.j)]; if(p) addEntries(slot,p.entries,'Добавено към '+slotDef(slot).name); }
+  else if(act==='shuffle'){ seeds[slot]=(seeds[slot]||0)+1; shuffled=slot; render(); }
   else if(act==='minus'||act==='plus'){
     const l=getDay(cur).slots[slot]; if(!l||!l[i]) return;
     const g=l[i].g, step = g<100?5:10;
-    changeGrams(slot,i, act==='plus'? g+step : g-step);
+    if(act==='minus'){ if(g<=5) return; changeGrams(slot,i,Math.max(5,g-step)); }
+    else changeGrams(slot,i,g+step);
   }
-  else if(act==='remove'){ changeGrams(slot,i,0); }
+  else if(act==='remove'){
+    const l=getDay(cur).slots[slot]; if(!l||!l[i]) return;
+    const f=FOOD[l[i].id];
+    changeDay('Махнато: '+(f?f.name:'храна'), ()=>{ ensureDay(cur).slots[slot].splice(i,1); });
+  }
   else if(act==='pick'){ openPicker(slot); }
   else if(act==='autofill'){ autofill(); }
   else if(act==='copy'){
     const y = data.days[shiftKey(cur,-1)];
-    if(!y || !Object.values(y.slots).some(l=>l.length)){ toast('За предишния ден няма записи.'); return; }
-    data.days[cur] = JSON.parse(JSON.stringify(y)); save(); render(); toast('Копирано от предишния ден.');
+    if(!hasEntries(y)){ toast('За предишния ден няма записи.'); return; }
+    const had = hasEntries(data.days[cur]);
+    changeDay(had ? 'Записите са заменени с тези от вчера.' : 'Копирано от предишния ден.', ()=>{ data.days[cur] = JSON.parse(JSON.stringify(y)); });
   }
   else if(act==='clear'){
-    const b=$('clearBtn');
-    if(Date.now()-clearArmed<3000){ delete data.days[cur]; save(); clearArmed=0; b.classList.remove('armed'); b.textContent='Изчисти деня'; render(); toast('Денят е изчистен.'); }
-    else { clearArmed=Date.now(); b.classList.add('armed'); b.textContent='Натисни пак за изчистване'; setTimeout(()=>{ if(Date.now()-clearArmed>=2900){ b.classList.remove('armed'); b.textContent='Изчисти деня'; } },3000); }
+    if(!hasEntries(data.days[cur])){ toast('Денят вече е празен.'); return; }
+    changeDay('Денят е изчистен.', ()=>{ delete data.days[cur]; });
   }
+  else if(act==='undo'){ const f=undoFn; hideToast(); if(f) f(); }
   else if(act==='settings'){ openSettings(); }
-  else if(act==='close'){ closeSheets(); }
-  else if(act==='closeRecipe'){ $('recipeSheet').hidden=true; }
-  else if(act==='recipe'){ openRecipe(el.dataset.id, $('picker').hidden ? null : pickSlot); }
-  else if(act==='recAdd'){ const f=FOOD[el.dataset.id]; if(f && recFromSlot){ addEntries(recFromSlot,[{id:f.id,g:f.por}]); $('recipeSheet').hidden=true; closeSheets(); toast('Добавено: '+f.name); } }
-  else if(act==='addfood'){ const f=FOOD[el.dataset.id]; if(f){ addEntries(pickSlot,[{id:f.id,g:f.por}]); closeSheets(); toast('Добавено: '+f.name); } }
+  else if(act==='closeSheet'){ closeTop(); }
+  else if(act==='recipe'){ openRecipe(el.dataset.id, isOpen('picker') ? pickSlot : null); }
+  else if(act==='recAdd'){ const f=FOOD[el.dataset.id]; if(f && recFromSlot){ const s=recFromSlot; closeAllSheets(); addFood(s,f); } }
+  else if(act==='addfood'){ const f=FOOD[el.dataset.id]; if(f){ closeAllSheets(); addFood(pickSlot,f); } }
   else if(act==='fav'){
     toggleFav(el.dataset.id);
-    if(!$('recipeSheet').hidden && recOpenId) openRecipe(recOpenId, recFromSlot);
-    if(!$('picker').hidden) renderPickList();
-    if(!$('chooser').hidden) openChooser(chooserId);
+    if(isOpen('recipeSheet') && recOpenId) openRecipe(recOpenId, recFromSlot);
+    if(isOpen('picker')) renderPickList();
+    if(isOpen('chooser')) openChooser(chooserId);
     render(); renderLogResults();
   }
   else if(act==='choose'){ openChooser(el.dataset.id); }
-  else if(act==='chooseSlot'){ const f=FOOD[chooserId]; if(f){ addEntries(el.dataset.slot,[{id:f.id,g:f.por}]); $('chooser').hidden=true; $('logSearch').value=''; renderLogResults(); toast('Добавено: '+f.name+' → '+slotDef(el.dataset.slot).name); } }
-  else if(act==='closeChooser'){ $('chooser').hidden=true; }
-  else if(act==='chip'){ pickCat=el.dataset.cat; renderPickList(); }
+  else if(act==='chooseSlot'){
+    const f=FOOD[chooserId]; if(!f) return;
+    closeAllSheets(); $('logSearch').value=''; renderLogResults(); $('logSearch').blur();
+    addFood(el.dataset.slot, f);
+  }
+  else if(act==='chip'){ pickCat=el.dataset.cat; $('pickSearch').value=''; renderPickList(); }
+  else if(act==='recCat'){ recCat=el.dataset.cat; $('recSearch').value=''; renderRecipes(); }
   else if(act==='bcfind'){ lookupCode($('bcCode').value); }
   else if(act==='bcmanual'){ fillCustom(null); }
 });
 document.addEventListener('change', ev=>{
   const el=ev.target; if(el.dataset && el.dataset.act==='grams') changeGrams(el.dataset.slot, Number(el.dataset.i), parseFloat(el.value));
 });
+document.addEventListener('focusin', ev=>{
+  const el=ev.target; if(el.dataset && el.dataset.act==='grams'){ try{ el.select(); }catch(e){} }
+});
 document.addEventListener('keydown', ev=>{
-  if(ev.key==='Escape'){ if(!$('recipeSheet').hidden) $('recipeSheet').hidden=true; else if(!$('chooser').hidden) $('chooser').hidden=true; else closeSheets(); }
+  if(ev.key==='Escape'){
+    if(sheetStack.length){ ev.preventDefault(); closeTop(); }
+    else if(document.activeElement===$('logSearch') && $('logSearch').value){ $('logSearch').value=''; renderLogResults(); }
+  }
   if(ev.key==='Enter' && ev.target.dataset && ev.target.dataset.act==='grams') ev.target.blur();
   if(ev.key==='Enter' && ev.target.id==='bcCode'){ ev.preventDefault(); lookupCode(ev.target.value); }
+  if((ev.key==='Enter'||ev.key===' ') && ev.target.id==='bcLabel'){ ev.preventDefault(); $('bcFile').click(); }
 });
-document.querySelectorAll('.sheet-wrap').forEach(w=>w.addEventListener('click', ev=>{ if(ev.target!==w) return; if(w.id==='recipeSheet'||w.id==='chooser') w.hidden=true; else closeSheets(); }));
-function closeSheets(){ $('picker').hidden=true; $('settings').hidden=true; }
 $('recSearch').addEventListener('input', renderRecipes);
 function renderLogResults(){
-  const q = $('logSearch').value.trim().toLowerCase();
+  const q = $('logSearch').value.trim();
   const box = $('logResults');
   if(!q){ box.hidden=true; box.innerHTML=''; return; }
-  const list = allFoods().filter(f=>f.name.toLowerCase().includes(q)).sort((a,b)=>(isFav(b.id)-isFav(a.id)) || a.name.localeCompare(b.name,'bg')).slice(0,15);
+  const list = allFoods().filter(f=>matches(f.name,q)).sort((a,b)=>(isFav(b.id)-isFav(a.id)) || a.name.localeCompare(b.name,'bg')).slice(0,15);
   box.hidden=false;
   box.innerHTML = list.length ? list.map(f=>{ const n=nut(f,f.por);
-    return `<li><button type="button" class="padd" data-act="choose" data-id="${esc(f.id)}"><span><span class="pname">${esc(f.name)}</span>${f.X?`<span class="warn-tag" style="display:block">${WARN}</span>`:''}<span class="pmeta">порция ${f.por} ${unit(f)} · ${fmt(n.k)} ккал</span></span><span class="plus" aria-hidden="true">+</span></button>${starBtn(f.id)}</li>`; }).join('')
-    : `<li style="padding:10px 12px" class="empty-list">Няма такова. Добави го през „+ Добави“ като своя храна.</li>`;
+    return `<li class="frow">${starBtn(f.id)}<button type="button" class="fbody" data-act="choose" data-id="${esc(f.id)}"><span class="fname">${esc(f.name)}</span>${warnTag(f)}<span class="fmeta">порция ${f.por} ${unit(f)} · ${fmt(n.k)} ккал</span></button><button type="button" class="round-add" data-act="choose" data-id="${esc(f.id)}" aria-label="Добави ${esc(f.name)}">${ico('plus')}</button></li>`; }).join('')
+    : `<li class="empty-list">Няма такова. Добави го като „своя храна“ през „Добави храна“ в някое хранене.</li>`;
 }
 $('logSearch').addEventListener('input', renderLogResults);
 let chooserId = null;
@@ -1412,11 +1953,11 @@ function openChooser(id){
   const n = nut(f,f.por);
   $('chTitle').textContent = f.name;
   const slots = TYPES[getDay(cur).type].slots;
-  $('chBody').innerHTML = `<p class="rnut">порция ${f.por} ${unit(f)} · ${fmt(n.k)} ккал · Б ${r0(n.p)} · В ${r0(n.c)} · М ${r0(n.f)} г · сол ${s1(n.s)} г</p>${f.X?`<p class="warn-tag" style="margin:0;font-size:1rem">${WARN}</p>`:''}
-    <div class="sec-title">Добави към:</div>
-    <div class="slotbtns">${slots.map(s=>`<button type="button" data-act="chooseSlot" data-slot="${s.id}">${esc(s.name)}<span>${esc(s.time)}</span></button>`).join('')}</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">${hasRec(id)?`<button type="button" class="ghost small" data-act="recipe" data-id="${esc(id)}">Виж рецептата</button>`:''}<button type="button" class="favbtn ${isFav(id)?'on':''}" data-act="fav" data-id="${esc(id)}">${isFav(id)?'★ В любими':'☆ Добави в любими'}</button></div>`;
-  $('chooser').hidden = false;
+  $('chBody').innerHTML = `<p class="macro-line nutline">${macroLine(n)} · порция ${f.por} ${unit(f)}</p>${warnBig(f)}
+    <div class="sec-title">Добави към</div>
+    <div class="slotgrid">${slots.map(s=>`<button type="button" data-act="chooseSlot" data-slot="${esc(s.id)}">${badge(slotUI(s.id))}<span><b>${esc(s.name)}</b><small>${esc(s.time)}</small></span></button>`).join('')}</div>
+    <div class="row-btns">${hasRec(id)?`<button type="button" class="btn btn-soft" data-act="recipe" data-id="${esc(id)}">${ico('chef')}<span>Рецепта</span></button>`:''}<button type="button" class="btn btn-soft favbtn${isFav(id)?' on':''}" data-act="fav" data-id="${esc(id)}" aria-pressed="${isFav(id)}">${ico('star')}<span>${isFav(id)?'В любими':'Любими'}</span></button></div>`;
+  openSheet('chooser');
 }
 window.addEventListener('hashchange', ()=>{ const h=location.hash.slice(1); if(h && h!==view) setView(h); });
 
@@ -1429,24 +1970,33 @@ function openPicker(slot){
   $('pickTitle').textContent = 'Добави към: '+sl.name;
   $('pickSearch').value='';
   $('bcPanel').hidden=true; $('bcCode').value=''; pendingCode=''; $('customBox').open=false;
-  $('picker').hidden=false;
   renderPickList();
+  openSheet('picker');
+  $('picker').querySelector('.sheet-body').scrollTop = 0;
+  const ch = $('pickChips').querySelector('[aria-pressed="true"]'); $('pickChips').scrollLeft = 0; if(ch && ch.offsetLeft>200) $('pickChips').scrollLeft = ch.offsetLeft-16;
 }
 function renderPickList(){
   const sl = slotDef(pickSlot);
-  const chips = (data.favs.length?[['fav','★ Любими']]:[]).concat([['fit','Подходящи'],['all','Всички']]).concat(Object.entries(CATS));
-  $('pickChips').innerHTML = chips.filter(c=>c[0]!=='fit'||sl.cats.length).map(([k,v])=>`<button type="button" data-act="chip" data-cat="${k}" aria-pressed="${pickCat===k}">${v}</button>`).join('');
-  const q = $('pickSearch').value.trim().toLowerCase();
+  const hasFav = data.favs.some(id=>FOOD[id]);
+  if(pickCat==='fav' && !hasFav) pickCat = sl.cats.length ? 'fit' : 'all';
+  const q = $('pickSearch').value.trim();
+  const chips = (hasFav?[['fav','★ Любими']]:[]).concat(sl.cats.length?[['fit','Подходящи']]:[]).concat([['all','Всички']]).concat(Object.entries(CATS));
+  $('pickChips').innerHTML = chips.map(([k,v])=>`<button type="button" class="chip" data-act="chip" data-cat="${k}" aria-pressed="${!q && pickCat===k}">${esc(v)}</button>`).join('');
   let list = allFoods();
-  if(q) list = list.filter(f=>f.name.toLowerCase().includes(q));
+  if(q) list = list.filter(f=>matches(f.name,q));
   else if(pickCat==='fav') list = list.filter(f=>isFav(f.id));
   else if(pickCat==='fit') list = list.filter(f=>sl.cats.includes(f.cat) || f.cat==='nap' || (f.cat==='gar' && sl.cats.includes('osn')) || ((f.cat==='pro'||f.cat==='mez') && sl.cats.includes('mez')));
   else if(pickCat!=='all') list = list.filter(f=>f.cat===pickCat);
   const order = Object.keys(CATS);
   list.sort((a,b)=> (order.indexOf(a.cat)-order.indexOf(b.cat)) || a.name.localeCompare(b.name,'bg'));
-  $('pickList').innerHTML = list.length ? list.map(f=>{ const n=nut(f,f.por);
-    return `<li><button type="button" class="padd" data-act="addfood" data-id="${esc(f.id)}"><span><span class="pname">${esc(f.name)}</span>${f.X?`<span class="warn-tag" style="display:block">${WARN}</span>`:''}<span class="pmeta">${CATS[f.cat]||''}${f.code?' · с баркод':''} · порция ${f.por} ${unit(f)} · ${fmt(n.k)} ккал · Б ${r0(n.p)} г · сол ${s1(n.s)} г</span></span><span class="plus" aria-hidden="true">+</span></button>${hasRec(f.id)?`<button type="button" class="prec" data-act="recipe" data-id="${esc(f.id)}">Рецепта</button>`:''}${starBtn(f.id)}</li>`; }).join('')
-    : `<li class="empty-list">Няма такава храна. Добави я отдолу като „своя храна“.</li>`;
+  const multi = new Set(list.map(f=>f.cat)).size > 1;
+  let lastCat = null, html = '';
+  list.forEach(f=>{
+    if(multi && f.cat!==lastCat){ html += `<li class="fgroup">${esc(CATS[f.cat]||'Друго')}</li>`; lastCat = f.cat; }
+    const n=nut(f,f.por);
+    html += `<li class="frow">${starBtn(f.id)}<button type="button" class="fbody" data-act="addfood" data-id="${esc(f.id)}"><span class="fname">${esc(f.name)}</span>${warnTag(f)}<span class="fmeta">${f.code?'с баркод · ':''}${f.por} ${unit(f)} · ${fmt(n.k)} ккал · Б ${r0(n.p)} г · сол ${s1(n.s)} г</span></button>${hasRec(f.id)?`<button type="button" class="ibtn" data-act="recipe" data-id="${esc(f.id)}" aria-label="Рецепта: ${esc(f.name)}" title="Рецепта">${ico('chef')}</button>`:''}<button type="button" class="round-add" data-act="addfood" data-id="${esc(f.id)}" aria-label="Добави ${esc(f.name)}">${ico('plus')}</button></li>`;
+  });
+  $('pickList').innerHTML = html || `<li class="empty-list">Няма такава храна. Добави я отдолу като „своя храна“.</li>`;
 }
 $('pickSearch').addEventListener('input', renderPickList);
 $('cf-cat').innerHTML = Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${k==='pro'?'selected':''}>${v}</option>`).join('');
@@ -1457,20 +2007,16 @@ $('customForm').addEventListener('submit', ev=>{
   const food = {id:'c'+Date.now(), name, cat:$('cf-cat').value, k:num('cf-k'), p:num('cf-p'), c:num('cf-c'), f:num('cf-f'), s:num('cf-s'), por:Math.max(1,num('cf-por')||100)};
   const code = $('cf-code').value.replace(/\D/g,'');
   if(code){ food.code = code; data.custom = data.custom.filter(c=>c.code!==code); }
-  data.custom.push(food); buildFoods();
-  addEntries(pickSlot,[{id:food.id,g:food.por}]);
+  data.custom.push(food); buildFoods(); save();
+  const slot = pickSlot;
   $('customForm').reset(); $('cf-cat').value='pro'; $('cf-por').value=100;
-  closeSheets(); toast('Запазено и добавено: '+name);
+  closeAllSheets();
+  addFood(slot, food);
 });
 
-/* ---------- Баркод и етикет ---------- */
-let sampleFn = null, pendingCode = '';
-function updateLabelBtn(){
-  $('bcNewText').textContent = 'Въведи стойностите от етикета (на 100 г). Следващия път този баркод ще се разпознае веднага.';
-}
-updateLabelBtn();
-
-function bcShow(msg, isNew){ $('bcPanel').hidden=false; $('bcMsg').textContent=msg; $('bcNew').hidden=!isNew; }
+/* ---------- Баркод ---------- */
+let pendingCode = '';
+function bcShow(msg, isNew){ $('bcPanel').hidden=false; $('bcMsg').textContent=msg; $('bcNew').hidden=!isNew; $('picker').querySelector('.sheet-body').scrollTop = 0; }
 function loadZXing(){
   if(window.ZXing) return Promise.resolve();
   if(loadZXing.p) return loadZXing.p;
@@ -1514,7 +2060,7 @@ function lookupCode(raw){
   if(!code){ bcShow('Въведи цифрите под баркода.', false); return; }
   $('bcCode').value=code; pendingCode=code;
   const f=allFoods().find(x=>x.code===code);
-  if(f){ addEntries(pickSlot,[{id:f.id,g:f.por}]); closeSheets(); toast('Добавено: '+f.name); return; }
+  if(f){ const slot=pickSlot; closeAllSheets(); addFood(slot,f); return; }
   bcShow('Баркод '+code+' — този продукт още не е записан.', true);
 }
 function fillCustom(v){
@@ -1523,8 +2069,8 @@ function fillCustom(v){
   const set=(id,x)=>{ const n=Number(x); if(x!=null && x!=='' && isFinite(n)) $(id).value=Math.round(n*10)/10; };
   if(v){ set('cf-k',v.kcal); set('cf-p',v.protein); set('cf-c',v.carbs); set('cf-f',v.fat); set('cf-s',v.salt); if(Number(v.portion)>0) $('cf-por').value=Math.round(v.portion); }
   $('cf-code').value = pendingCode || $('bcCode').value.replace(/\D/g,'');
-  box.scrollIntoView({block:'start'});
-  if(!$('cf-name').value) $('cf-name').focus();
+  box.scrollIntoView({block:'start', behavior: REDUCED.matches ? 'auto' : 'smooth'});
+  if(!$('cf-name').value) $('cf-name').focus({preventScroll:true});
 }
 $('bcFile').addEventListener('change', async ev=>{
   const file=ev.target.files && ev.target.files[0]; ev.target.value=''; if(!file) return;
@@ -1534,13 +2080,13 @@ $('bcFile').addEventListener('change', async ev=>{
   else bcShow('Не успях да разчета баркода. Снимай го отблизо, на светло и без отблясъци — или въведи цифрите под него.', false);
 });
 
-
-/* ---------- Самостоятелно приложение: офлайн и гласово търсене ---------- */
+/* ---------- Офлайн и гласово търсене ---------- */
 if('serviceWorker' in navigator){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let activeRec = null;
 function setupMic(btnId, inputId, after){
   const btn = $(btnId), input = $(inputId);
+  input.dataset.ph = input.placeholder;
   if(!SR){ btn.hidden = true; return; }
   btn.hidden = false;
   btn.addEventListener('click', ()=>{
@@ -1557,41 +2103,62 @@ function setupMic(btnId, inputId, after){
       after();
     };
     rec.onerror = ev=>{
-      if(ev.error==='not-allowed' || ev.error==='service-not-allowed') toast('Разреши микрофона: натисни катинарчето до адреса → Разрешения → Микрофон.');
+      if(ev.error==='not-allowed' || ev.error==='service-not-allowed') toast('Разреши микрофона: катинарчето до адреса → Разрешения → Микрофон.');
       else if(ev.error==='no-speech') toast('Не чух нищо — натисни микрофона и опитай пак.');
       else if(ev.error==='network') toast('Гласовото търсене иска интернет.');
     };
     rec.onend = ()=>{ activeRec = null; btn.classList.remove('on'); btn.setAttribute('aria-pressed','false'); input.placeholder = input.dataset.ph || ''; after(); };
-    try{ rec.start(); }catch(e){ activeRec=null; btn.classList.remove('on'); }
+    try{ rec.start(); }catch(e){ activeRec=null; btn.classList.remove('on'); btn.setAttribute('aria-pressed','false'); input.placeholder = input.dataset.ph || ''; }
   });
 }
-$('logSearch').dataset.ph = $('logSearch').placeholder;
-$('pickSearch').dataset.ph = $('pickSearch').placeholder;
 setupMic('micLog','logSearch', renderLogResults);
 setupMic('micPick','pickSearch', renderPickList);
-if(SR){ const t=$('micTip'); if(t) t.hidden = true; }
+$('micTip').hidden = !!SR;
 
 /* ---------- Настройки ---------- */
 const SET_FIELDS = ['sex','age','height','weight','act','goal','manual','pp','cp','fp','salt'];
 function readSettingsForm(){
   const s = Object.assign({}, data.settings);
-  SET_FIELDS.forEach(k=>{ const v=$('st-'+k).value; s[k] = (k==='sex') ? v : (k==='manual' ? v : (parseFloat(v)||s[k])); });
+  SET_FIELDS.forEach(k=>{
+    const v = $('st-'+k).value;
+    if(k==='sex' || k==='manual') s[k] = v;
+    else { const n = parseFloat(v); if(isFinite(n)) s[k] = n; }   // 0 е валидна стойност (напр. „Задържане на теглото“)
+  });
   return s;
 }
 function openSettings(){
   SET_FIELDS.forEach(k=>{ $('st-'+k).value = data.settings[k]; });
-  $('settings').hidden=false; updateCalc();
+  updateCalc();
+  openSheet('settings');
+  $('settings').querySelector('.sheet-body').scrollTop = 0;
 }
 function updateCalc(){
-  const keep = data.settings; data.settings = readSettingsForm(); const T = targets(); data.settings = keep;
-  $('setCalc').innerHTML = `Дневна цел: <b>${fmt(T.k)} ккал</b> · белтъчини ${r0(T.p)} г · въглехидрати ${r0(T.c)} г · мазнини ${r0(T.f)} г · сол до ${s1(T.s)} г`;
+  const keep = data.settings; data.settings = readSettingsForm(); const T = targets(); const s = data.settings; data.settings = keep;
+  $('setCalc').innerHTML = `<span>Дневна цел</span><b>${fmt(T.k)} ккал</b><div class="calc-m"><em>Б ${r0(T.p)} г</em><em>В ${r0(T.c)} г</em><em>М ${r0(T.f)} г</em><em>сол до ${s1(T.s)} г</em></div>`;
+  const sum = Number(s.pp)+Number(s.cp)+Number(s.fp);
+  const h = $('macroHint');
+  h.classList.toggle('bad', sum!==100);
+  h.textContent = sum===100 ? 'Сбор: 100% ✓' : `Сбор: ${sum}% — ще се разпредели пропорционално до 100%.`;
 }
 $('setForm').addEventListener('input', updateCalc);
+$('setForm').addEventListener('change', updateCalc);
 $('setForm').addEventListener('submit', ev=>{
-  ev.preventDefault(); data.settings = Object.assign(readSettingsForm(), {saved:true}); save(); closeSheets(); render(); toast('Целта е обновена.');
+  ev.preventDefault();
+  data.settings = Object.assign(readSettingsForm(), {saved:true}); save();
+  closeAllSheets(); render(); toast('Целта е обновена: '+fmt(targets().k)+' ккал.');
 });
 
+/* ---------- Дата от календара ---------- */
+$('datePick').addEventListener('click', ev=>{ try{ if(ev.target.showPicker) ev.target.showPicker(); }catch(e){} });
+$('datePick').addEventListener('change', ev=>{ const v = ev.target.value; if(/^\d{4}-\d{2}-\d{2}$/.test(v)){ cur = v; render(); } });
+
+/* ---------- Старт ---------- */
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshToday(); });
+window.addEventListener('focus', refreshToday);
+const onScroll = ()=>$('appbar').classList.toggle('scrolled', window.scrollY>4);
+window.addEventListener('scroll', onScroll, {passive:true});
 setView(location.hash.slice(1)||'dnevnik');
+onScroll();
 </script>
 </body>
 </html>
