@@ -1763,7 +1763,7 @@ function hideSheet(id){
   clearTimeout(w._t);
   w._t = setTimeout(()=>{ w.hidden = true; w.classList.remove('closing'); sh.style.transform=''; sh.style.transition=''; }, REDUCED.matches ? 0 : 220);
   if(!sheetStack.length) document.body.classList.remove('locked');
-  if(activeRec){ try{ activeRec.stop(); }catch(e){} }
+  stopMic(null);
   const f = focusBack.pop();
   if(f && f.focus && document.contains(f) && f!==document.body){ try{ f.focus({preventScroll:true}); }catch(e){} }
 }
@@ -1797,14 +1797,14 @@ document.querySelectorAll('.sheet-wrap').forEach(w=>{
 
 /* ---------- Известие с „Върни“ ---------- */
 let undoFn = null;
-function toast(msg, undo){
+function toast(msg, action, label, ms){
   const t = $('toast');
-  t.innerHTML = ico('check')+'<span></span>'+(undo?'<button type="button" class="toast-btn" data-act="undo">Върни</button>':'');
+  t.innerHTML = ico(label ? 'refresh' : 'check')+'<span></span>'+(action?`<button type="button" class="toast-btn" data-act="undo">${esc(label||'Върни')}</button>`:'');
   t.querySelector('span').textContent = msg;
-  undoFn = undo || null;
+  undoFn = action || null;
   t.hidden = false;
   t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
-  clearTimeout(toast._t); toast._t = setTimeout(hideToast, undo ? 6000 : 2600);
+  clearTimeout(toast._t); toast._t = setTimeout(hideToast, ms || (action ? 6000 : 2600));
 }
 function hideToast(){ $('toast').hidden = true; undoFn = null; }
 // Променя деня и позволява да се върне назад с един бутон.
@@ -2083,36 +2083,73 @@ $('bcFile').addEventListener('change', async ev=>{
 /* ---------- Офлайн и гласово търсене ---------- */
 if('serviceWorker' in navigator){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let activeRec = null;
+const mic = {rec:null, btn:null, input:null, after:null, heard:false, timer:null};
+function micUI(btn, input, on){
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', String(on));
+  btn.setAttribute('aria-label', on ? 'Спри гласовото търсене' : 'Търси с глас');
+  input.placeholder = on ? 'Слушам… кажи ястието' : (input.dataset.ph || '');
+}
+// Спира слушането веднага и връща бутона в нормален вид — дори ако телефонът „увисне“ и не съобщи, че е спрял.
+function stopMic(msg){
+  if(!mic.rec) return;
+  const rec = mic.rec, btn = mic.btn, input = mic.input, after = mic.after;
+  mic.rec = null; clearTimeout(mic.timer);
+  try{ rec.abort(); }catch(e){}
+  micUI(btn, input, false);
+  if(msg) toast(msg);
+  if(after) after();
+}
+const NOTHING_HEARD = 'Не чух нищо. Опитай пак или ползвай микрофона на клавиатурата.';
+function armMicTimer(ms){ clearTimeout(mic.timer); mic.timer = setTimeout(()=>stopMic(mic.heard ? null : NOTHING_HEARD), ms); }
+function startMic(btn, input, after){
+  let rec;
+  try{ rec = new SR(); }catch(e){ toast('Гласовото търсене не работи на този телефон.'); return; }
+  rec.lang = 'bg-BG'; rec.interimResults = true; rec.maxAlternatives = 1; rec.continuous = false;
+  Object.assign(mic, {rec, btn, input, after, heard:false});
+  const live = ()=>mic.rec===rec;   // късни събития от вече спрян разпознавач се пренебрегват
+  rec.onresult = ev=>{
+    if(!live()) return;
+    let txt = '';
+    for(let i=0;i<ev.results.length;i++) txt += ev.results[i][0].transcript;
+    input.value = txt.trim().replace(/[.!?]$/,'');
+    mic.heard = !!input.value;
+    after();
+    const last = ev.results[ev.results.length-1];
+    if(last && last.isFinal) stopMic(null);
+    else armMicTimer(2500);         // след кратка пауза спира само
+  };
+  rec.onerror = ev=>{
+    if(!live()) return;
+    const e = ev.error;
+    let msg = null;
+    if(e==='not-allowed' || e==='service-not-allowed') msg = 'Разреши микрофона: катинарчето до адреса → Разрешения → Микрофон.';
+    else if(e==='no-speech') msg = NOTHING_HEARD;
+    else if(e==='network') msg = 'Гласовото търсене иска интернет.';
+    else if(e==='audio-capture') msg = 'Микрофонът не е достъпен — може да е зает от друго приложение.';
+    else if(e==='language-not-supported') msg = 'Телефонът не разпознава български глас. Ползвай микрофона на клавиатурата.';
+    else if(e!=='aborted') msg = 'Гласовото търсене спря. Опитай пак или ползвай микрофона на клавиатурата.';
+    stopMic(msg);
+  };
+  rec.onend = ()=>{ if(live()) stopMic(mic.heard ? null : NOTHING_HEARD); };
+  input.value = ''; after();
+  micUI(btn, input, true);
+  armMicTimer(9000);                // ако до 9 секунди нищо не се чуе — спира само
+  try{ rec.start(); }catch(e){ stopMic('Гласовото търсене не тръгна. Опитай пак.'); }
+}
 function setupMic(btnId, inputId, after){
   const btn = $(btnId), input = $(inputId);
   input.dataset.ph = input.placeholder;
   if(!SR){ btn.hidden = true; return; }
   btn.hidden = false;
   btn.addEventListener('click', ()=>{
-    if(activeRec){ try{ activeRec.stop(); }catch(e){} return; }
-    let rec;
-    try{ rec = new SR(); }catch(e){ toast('Гласовото търсене не работи на този телефон.'); return; }
-    rec.lang = 'bg-BG'; rec.interimResults = true; rec.maxAlternatives = 1; rec.continuous = false;
-    activeRec = rec; btn.classList.add('on'); btn.setAttribute('aria-pressed','true');
-    input.value = ''; input.placeholder = 'Слушам… кажи ястието';
-    rec.onresult = ev=>{
-      let txt = '';
-      for(let i=0;i<ev.results.length;i++) txt += ev.results[i][0].transcript;
-      input.value = txt.trim().replace(/[.!?]$/,'');
-      after();
-    };
-    rec.onerror = ev=>{
-      if(ev.error==='not-allowed' || ev.error==='service-not-allowed') toast('Разреши микрофона: катинарчето до адреса → Разрешения → Микрофон.');
-      else if(ev.error==='no-speech') toast('Не чух нищо — натисни микрофона и опитай пак.');
-      else if(ev.error==='network') toast('Гласовото търсене иска интернет.');
-    };
-    rec.onend = ()=>{ activeRec = null; btn.classList.remove('on'); btn.setAttribute('aria-pressed','false'); input.placeholder = input.dataset.ph || ''; after(); };
-    try{ rec.start(); }catch(e){ activeRec=null; btn.classList.remove('on'); btn.setAttribute('aria-pressed','false'); input.placeholder = input.dataset.ph || ''; }
+    if(mic.rec){ const same = mic.btn===btn; stopMic(null); if(same) return; }   // второ натискане = спри веднага
+    startMic(btn, input, after);
   });
 }
 setupMic('micLog','logSearch', renderLogResults);
 setupMic('micPick','pickSearch', renderPickList);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) stopMic(null); });
 $('micTip').hidden = !!SR;
 
 /* ---------- Настройки ---------- */
@@ -2152,8 +2189,29 @@ $('setForm').addEventListener('submit', ev=>{
 $('datePick').addEventListener('click', ev=>{ try{ if(ev.target.showPicker) ev.target.showPicker(); }catch(e){} });
 $('datePick').addEventListener('change', ev=>{ const v = ev.target.value; if(/^\d{4}-\d{2}-\d{2}$/.test(v)){ cur = v; render(); } });
 
+/* ---------- Нова версия ----------
+   Приложението се обновява само: при всяко отваряне с интернет се зарежда последната версия от GitHub.
+   Ако е останало отворено във фона, при връщане в него проверява дали има нова версия и предлага „Обнови“. */
+let pageTag = null, lastCheck = 0;
+async function versionTag(){
+  const r = await fetch('./index.html', {method:'HEAD', cache:'no-store'});
+  if(!r.ok) return null;
+  return r.headers.get('etag') || ((r.headers.get('last-modified')||'')+'|'+(r.headers.get('content-length')||'')) || null;
+}
+async function checkUpdate(){
+  if(!/^https?:/.test(location.protocol) || !navigator.onLine) return;
+  if(Date.now()-lastCheck < 5*60*1000) return;
+  lastCheck = Date.now();
+  try{
+    const tag = await versionTag(); if(!tag) return;
+    if(!pageTag){ pageTag = tag; return; }
+    if(tag!==pageTag) toast('Има нова версия на приложението.', ()=>location.reload(), 'Обнови', 15000);
+  }catch(e){}
+}
+window.addEventListener('load', ()=>{ setTimeout(()=>{ lastCheck = 0; checkUpdate(); }, 1500); });
+
 /* ---------- Старт ---------- */
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshToday(); });
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ refreshToday(); checkUpdate(); } });
 window.addEventListener('focus', refreshToday);
 const onScroll = ()=>$('appbar').classList.toggle('scrolled', window.scrollY>4);
 window.addEventListener('scroll', onScroll, {passive:true});
