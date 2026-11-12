@@ -428,6 +428,20 @@ p{margin:0}
 .shop-sec + .shop-sec{margin-top:6px}
 .sheet .chip[aria-pressed="true"]{background:linear-gradient(135deg,var(--btn),var(--btn-2));color:#fff}
 
+/* Храни в приложението */
+.checklist.flat{background:none;box-shadow:none;padding:0;border-radius:0}
+.checklist.flat .citem{padding:0}
+.checklist.flat .cdone-head{padding:14px 0 4px 2px}
+.checklist.flat .cdone-head:first-child{padding-top:2px}
+.fitem .cbox{padding:10px 4px}
+.fitem .ctext small{display:block;font-size:.78rem;color:var(--muted);font-weight:400;margin-top:1px}
+.citem.keep .box{background:var(--btn);border-color:var(--btn)}
+.citem.keep .box .i{opacity:1;transform:none}
+.fitem:not(.keep) .ctext{color:var(--muted);text-decoration:line-through;font-weight:400}
+.fitem:not(.keep) .box{border-color:var(--line)}
+.cdone-head b{color:var(--ink);font-weight:700}
+.sheet-foot.row-btns .btn{flex:1 1 0;min-height:50px}
+
 /* ---------- Прозорци отдолу ---------- */
 .sheet-wrap{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;background:var(--backdrop);animation:fadeIn .25s ease}
 .sheet-wrap.closing{animation:fadeOut .22s ease forwards;pointer-events:none}
@@ -800,6 +814,8 @@ p{margin:0}
         <p class="hint" id="macroHint"></p>
         <label class="field">Сол на ден, г<input id="st-salt" type="number" inputmode="decimal" min="1" max="15" step="0.5" required></label>
         <div class="calc" id="setCalc"></div>
+        <div class="sec-title">Храни</div>
+        <button type="button" class="btn btn-soft btn-block" data-act="foodsOpen"><svg class="i" aria-hidden="true"><use href="#i-list"/></svg><span id="foodsBtnTxt">Избери кои храни да има</span></button>
         <div id="installSet" hidden>
           <div class="sec-title">Приложение</div>
           <button type="button" class="btn btn-soft btn-block" data-act="install"><svg class="i" aria-hidden="true"><use href="#i-download"/></svg><span>Инсталирай на телефона</span></button>
@@ -860,6 +876,26 @@ p{margin:0}
       <p class="hint">Ако не виждаш „Сподели“, отвори линка в Safari.</p>
     </div>
     <div class="sheet-foot"><button type="button" class="btn btn-primary btn-block" data-act="closeSheet"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg><span>Разбрах</span></button></div>
+  </div>
+</div>
+
+<div class="sheet-wrap" id="foodsSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="foodsTitle" tabindex="-1">
+    <div class="sheet-head"><h3 id="foodsTitle">Храни в приложението</h3><button type="button" class="close-btn" data-act="closeSheet" aria-label="Затвори"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-sub">
+      <p class="hint">Махни отметката на храните, които не искаш — изчезват от предложенията, търсенето и рецептите. Можеш да ги върнеш по всяко време.</p>
+      <div class="search">
+        <label class="search-field"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+          <input id="foodsSearch" type="search" placeholder="Търси храна…" autocomplete="off" enterkeyhint="search" aria-label="Търси храна">
+        </label>
+      </div>
+      <div class="chips" id="foodsChips" role="group" aria-label="Групи храни"></div>
+    </div>
+    <div class="sheet-body" id="foodsBody"><ul class="checklist flat" id="foodsList"></ul></div>
+    <div class="sheet-foot row-btns">
+      <button type="button" class="btn btn-soft" data-act="foodsShowAll"><svg class="i" aria-hidden="true"><use href="#i-refresh"/></svg><span>Покажи всички</span></button>
+      <button type="button" class="btn btn-primary" data-act="closeSheet"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg><span id="foodsDone">Готово</span></button>
+    </div>
   </div>
 </div>
 
@@ -1542,6 +1578,7 @@ function normalize(d){
   })) : [];
   d.curList = d.lists.some(l=>l.id===d.curList) ? d.curList : (d.lists[0] ? d.lists[0].id : null);
   d.shopHist = Array.isArray(d.shopHist) ? d.shopHist.filter(x=>typeof x==='string' && x.trim()).slice(0,30) : [];
+  d.hidden = Array.isArray(d.hidden) ? [...new Set(d.hidden.filter(x=>typeof x==='string'))] : [];
   return d;
 }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -1562,6 +1599,10 @@ function buildFoods(){
 }
 buildFoods();
 const allFoods = ()=>Object.values(FOOD);
+// Скрити храни: махнати от предложенията, търсенето, избора и рецептите (записите в дневника остават).
+let hiddenSet = new Set(data.hidden);
+const isHiddenFood = id=>hiddenSet.has(id);
+const visibleFoods = ()=>allFoods().filter(f=>!hiddenSet.has(f.id));
 
 /* ---------- Сметки ---------- */
 const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
@@ -1596,13 +1637,14 @@ function context(day){
 }
 
 function templatesFor(sl){
-  const foods = allFoods().filter(f=>sl.cats.includes(f.cat) && !f.N && !f.X);
-  const sides = allFoods().filter(f=>f.G && !f.X);
-  const salads = allFoods().filter(f=>f.V && !f.X);
+  const foods = visibleFoods().filter(f=>sl.cats.includes(f.cat) && !f.N && !f.X);
+  const sides = visibleFoods().filter(f=>f.G && !f.X);
+  const salads = visibleFoods().filter(f=>f.V && !f.X);
+  const bread = isHiddenFood('hlqb') ? [] : [FOOD.hlqb];
   const out=[];
   foods.forEach(f=>{
     if(f.S) sides.forEach(g=>out.push([f,g]));
-    else if(f.cat==='mez') salads.forEach(v=>out.push([f,v,FOOD.hlqb]));
+    else if(f.cat==='mez') salads.forEach(v=>out.push([f,v].concat(bread)));
     else out.push([f]);
   });
   return out;
@@ -1827,20 +1869,35 @@ function suggestHTML(sl, tgt, day){
 
 /* ---------- Рецепти ---------- */
 const REC_ORDER = ['zak','sup','osn','ska','gar','bez','sna','sla','mez'];
+// Без готвене: групата „Без готвене“ + всяка рецепта, в чиито стъпки няма варене, печене, пържене и т.н.
+const HEAT = ['свар','вари ','вари.','вари,','варят','печ','задуш','пърж','затопл','загре','бланшир','кипв','ври ','сготв','фурн','тиган','скара','ейрфрайър','°c','разтоп','огън','вряла','вряща'];
+const READY_CATS = ['sla','mez','gar','sna','bez','pro'];
+const NOCOOK = new Set(Object.keys(REC).filter(id=>{
+  const f = FOOD[id], r = REC[id]; if(!f) return false;
+  if(f.cat==='bez') return true;
+  const steps = r[3] || [];
+  if(!steps.length) return READY_CATS.includes(f.cat);   // готови продукти (шоколад, туршия…), не скара
+  const txt = steps.join(' ').toLowerCase()+' ';
+  return !HEAT.some(h=>txt.includes(h));
+}));
 let recCat = 'all';
 function renderRecipes(){
   const q = $('recSearch').value.trim();
-  const withRec = allFoods().filter(f=>hasRec(f.id));
+  const withRec = visibleFoods().filter(f=>hasRec(f.id));
   const favs = withRec.filter(f=>isFav(f.id));
   if(recCat==='fav' && !favs.length) recCat = 'all';
-  const chips = [['all','Всички']].concat(favs.length?[['fav','★ Любими']]:[]).concat(REC_ORDER.filter(c=>withRec.some(f=>f.cat===c)).map(c=>[c,CATS[c]]));
-  $('recChips').innerHTML = chips.map(([k,v])=>`<button type="button" class="chip" data-act="recCat" data-cat="${k}" aria-pressed="${!q && recCat===k}">${esc(v)}</button>`).join('');
+  if(recCat==='bez') recCat = 'nocook';
+  const chips = [['all','Всички'],['nocook','Без готвене','leaf']].concat(favs.length?[['fav','★ Любими']]:[]).concat(REC_ORDER.filter(c=>c!=='bez' && withRec.some(f=>f.cat===c)).map(c=>[c,CATS[c]]));
+  $('recChips').innerHTML = chips.map(([k,v,ic])=>`<button type="button" class="chip" data-act="recCat" data-cat="${k}" aria-pressed="${!q && recCat===k}">${ic?ico(ic):''}${esc(v)}</button>`).join('');
   const byName = (a,b)=>a.name.localeCompare(b.name,'bg');
   let html = '';
   const group = (title,list)=>{ if(list.length) html += `<div class="rgroup"><h3>${esc(title)}</h3><ul class="rlist">${list.map(recRow).join('')}</ul></div>`; };
   if(q){
     const list = withRec.filter(f=>matches(f.name,q));
     REC_ORDER.forEach(c=>group(CATS[c], list.filter(f=>f.cat===c).sort(byName)));
+  } else if(recCat==='nocook'){
+    html += `<p class="lead">Без печка и фурна — само нарязваш, смесваш или намазваш. ${withRec.filter(f=>NOCOOK.has(f.id)).length} рецепти.</p>`;
+    REC_ORDER.forEach(c=>group(CATS[c], withRec.filter(f=>f.cat===c && NOCOOK.has(f.id)).sort(byName)));
   } else if(recCat==='fav'){
     group('Любими', favs.slice().sort(byName));
   } else if(recCat!=='all'){
@@ -1866,7 +1923,7 @@ function openRecipe(id, fromSlot){
   $('recTitle').textContent = f.name;
   const got = same ? [...$('recBody').querySelectorAll('.ing li')].map(li=>li.classList.contains('got')) : [];
   let html = '';
-  const badges = [y && [ 'utensils', y ], t && [ 'clock', t ]].filter(Boolean);
+  const badges = [y && [ 'utensils', y ], t && [ 'clock', t ], NOCOOK.has(id) && ['leaf', 'Без готвене']].filter(Boolean);
   if(badges.length) html += `<div class="rbadges">${badges.map(([ic,txt])=>`<span class="rbadge">${ico(ic)}${esc(txt)}</span>`).join('')}</div>`;
   html += warnBig(f);
   html += `<div class="nutgrid"><div class="nut"><b>${fmt(n.k)}</b><span>ккал</span></div><div class="nut p"><b>${r0(n.p)} г</b><span>белтъчини</span></div><div class="nut c"><b>${r0(n.c)} г</b><span>въглехидр.</span></div><div class="nut f"><b>${r0(n.f)} г</b><span>мазнини</span></div></div>`;
@@ -2103,6 +2160,16 @@ document.addEventListener('click', ev=>{
   else if(act==='shopAddTyped'){ const q=$('shopSearch').value.trim(); if(q){ addListItems([q]); $('shopSearch').value=''; renderShop(); } }
   else if(act==='recToList'){ recipeToList(el.dataset.id); }
   else if(act==='install'){ doInstall(); }
+  else if(act==='foodsOpen'){ openFoods(); }
+  else if(act==='foodToggle'){ toggleFood(el.dataset.id); }
+  else if(act==='foodsCat'){ foodsCat = el.dataset.cat; $('foodsSearch').value=''; renderFoods(); $('foodsBody').scrollTop = 0; }
+  else if(act==='foodsGroup'){ setGroupHidden(el.dataset.cat, el.dataset.hide==='1'); }
+  else if(act==='foodsShowAll'){
+    if(!data.hidden.length){ toast('Всички храни вече се показват.'); return; }
+    const before = data.hidden.slice();
+    data.hidden = []; syncHidden(); renderFoods();
+    toast('Всички храни се показват отново.', ()=>{ data.hidden = before; syncHidden(); renderFoods(); });
+  }
   else if(act==='installHide'){ try{ localStorage.setItem(INST_KEY, '1'); }catch(e){} renderInstall(); toast('Скрито. Можеш да го инсталираш и от Настройки.'); }
   else if(act==='bcmanual'){ fillCustom(null); }
 });
@@ -2126,7 +2193,7 @@ function renderLogResults(){
   const q = $('logSearch').value.trim();
   const box = $('logResults');
   if(!q){ box.hidden=true; box.innerHTML=''; return; }
-  const list = allFoods().filter(f=>matches(f.name,q)).sort((a,b)=>(isFav(b.id)-isFav(a.id)) || a.name.localeCompare(b.name,'bg')).slice(0,15);
+  const list = visibleFoods().filter(f=>matches(f.name,q)).sort((a,b)=>(isFav(b.id)-isFav(a.id)) || a.name.localeCompare(b.name,'bg')).slice(0,15);
   box.hidden=false;
   box.innerHTML = list.length ? list.map(f=>{ const n=nut(f,f.por);
     return `<li class="frow">${starBtn(f.id)}<button type="button" class="fbody" data-act="choose" data-id="${esc(f.id)}"><span class="fname">${esc(f.name)}</span>${warnTag(f)}<span class="fmeta">порция ${f.por} ${unit(f)} · ${fmt(n.k)} ккал</span></button><button type="button" class="round-add" data-act="choose" data-id="${esc(f.id)}" aria-label="Добави ${esc(f.name)}">${ico('plus')}</button></li>`; }).join('')
@@ -2168,7 +2235,7 @@ function renderPickList(){
   const q = $('pickSearch').value.trim();
   const chips = (hasFav?[['fav','★ Любими']]:[]).concat(sl.cats.length?[['fit','Подходящи']]:[]).concat([['all','Всички']]).concat(Object.entries(CATS));
   $('pickChips').innerHTML = chips.map(([k,v])=>`<button type="button" class="chip" data-act="chip" data-cat="${k}" aria-pressed="${!q && pickCat===k}">${esc(v)}</button>`).join('');
-  let list = allFoods();
+  let list = visibleFoods();
   if(q) list = list.filter(f=>matches(f.name,q));
   else if(pickCat==='fav') list = list.filter(f=>isFav(f.id));
   else if(pickCat==='fit') list = list.filter(f=>sl.cats.includes(f.cat) || f.cat==='nap' || (f.cat==='gar' && sl.cats.includes('osn')) || ((f.cat==='pro'||f.cat==='mez') && sl.cats.includes('mez')));
@@ -2498,6 +2565,77 @@ function recipeToList(id){
   else toast(`Добавени ${n} ${n===1?'продукт':'продукта'} в „${L.name}“.`, undo);
 }
 
+/* ---------- Храни в приложението (отметки) ---------- */
+let foodsCat = 'all', foodsRenderT = null;
+function syncHidden(){
+  hiddenSet = new Set(data.hidden); save();
+  clearTimeout(foodsRenderT); foodsRenderT = setTimeout(render, 250);   // обновява дневника/рецептите отзад
+  updateFoodsBtn();
+}
+function updateFoodsBtn(){
+  const n = allFoods().filter(f=>hiddenSet.has(f.id)).length;
+  $('foodsBtnTxt').textContent = n ? `Избери кои храни да има · скрити ${n}` : 'Избери кои храни да има';
+}
+function openFoods(){
+  foodsCat = 'all'; $('foodsSearch').value = '';
+  renderFoods(); openSheet('foodsSheet'); $('foodsBody').scrollTop = 0;
+}
+function foodRow(f){
+  const on = !hiddenSet.has(f.id), n = nut(f,f.por);
+  return `<li class="citem fitem${on?' keep':''}" data-id="${esc(f.id)}"><button type="button" class="cbox" data-act="foodToggle" data-id="${esc(f.id)}" aria-pressed="${on}"><span class="box">${ico('tick')}</span><span class="ctext">${esc(f.name)}<small>${f.custom?'своя храна · ':''}порция ${f.por} ${unit(f)} · ${fmt(n.k)} ккал</small></span></button></li>`;
+}
+function renderFoods(){
+  const all = allFoods();
+  const hiddenN = all.filter(f=>hiddenSet.has(f.id)).length;
+  const q = $('foodsSearch').value.trim();
+  if(foodsCat==='hidden' && !hiddenN) foodsCat = 'all';
+  const order = Object.keys(CATS);
+  const chips = [['all','Всички']].concat(hiddenN?[['hidden',`Скрити (${hiddenN})`]]:[]).concat(order.filter(c=>all.some(f=>f.cat===c)).map(c=>[c,CATS[c]]));
+  $('foodsChips').innerHTML = chips.map(([k,v])=>`<button type="button" class="chip" data-act="foodsCat" data-cat="${k}" aria-pressed="${!q && foodsCat===k}">${esc(v)}</button>`).join('');
+  let list = all;
+  if(q) list = list.filter(f=>matches(f.name,q));
+  else if(foodsCat==='hidden') list = list.filter(f=>hiddenSet.has(f.id));
+  else if(foodsCat!=='all') list = list.filter(f=>f.cat===foodsCat);
+  let html = '';
+  order.forEach(c=>{
+    const g = list.filter(f=>f.cat===c).sort((a,b)=>a.name.localeCompare(b.name,'bg')); if(!g.length) return;
+    const shown = g.filter(f=>!hiddenSet.has(f.id)).length, allOn = shown===g.length;
+    html += `<li class="cdone-head" data-cat="${c}"><span>${esc(CATS[c])} · <b>${shown}/${g.length}</b></span>${q?'':`<button type="button" class="link" data-act="foodsGroup" data-cat="${c}" data-hide="${allOn?1:0}">${allOn?'Махни всички':'Върни всички'}</button>`}</li>` + g.map(foodRow).join('');
+  });
+  $('foodsList').innerHTML = html || `<li class="empty-list">Няма такава храна.</li>`;
+  const total = all.length;
+  $('foodsDone').textContent = `Готово · ${total-hiddenN}/${total}`;
+}
+function toggleFood(id){
+  const i = data.hidden.indexOf(id);
+  if(i>=0) data.hidden.splice(i,1); else data.hidden.push(id);
+  syncHidden();
+  // обнови само реда и броячите — без да прескача списъкът
+  const li = $('foodsList').querySelector(`.fitem[data-id="${CSS.escape(id)}"]`);
+  if(li){ const on = !hiddenSet.has(id); li.classList.toggle('keep', on); li.querySelector('.cbox').setAttribute('aria-pressed', String(on)); }
+  const all = allFoods(), hiddenN = all.filter(f=>hiddenSet.has(f.id)).length;
+  $('foodsDone').textContent = `Готово · ${all.length-hiddenN}/${all.length}`;
+  const f = FOOD[id]; const head = f && $('foodsList').querySelector(`.cdone-head[data-cat="${f.cat}"]`);
+  if(head){
+    const rows = [...$('foodsList').querySelectorAll('.fitem')].filter(r=>FOOD[r.dataset.id] && FOOD[r.dataset.id].cat===f.cat);
+    const shown = rows.filter(r=>r.classList.contains('keep')).length, allOn = shown===rows.length;
+    head.querySelector('b').textContent = `${shown}/${rows.length}`;
+    const btn = head.querySelector('.link'); if(btn){ btn.dataset.hide = allOn?'1':'0'; btn.textContent = allOn?'Махни всички':'Върни всички'; }
+  }
+  const hc = $('foodsChips').querySelector('[data-cat="hidden"]');
+  if(hc) hc.textContent = `Скрити (${hiddenN})`; else if(hiddenN) renderFoodsChipsOnly();
+}
+function renderFoodsChipsOnly(){ const st = $('foodsBody').scrollTop; renderFoods(); $('foodsBody').scrollTop = st; }
+function setGroupHidden(cat, hide){
+  const ids = allFoods().filter(f=>f.cat===cat).map(f=>f.id);
+  const set = new Set(data.hidden);
+  ids.forEach(id=>hide ? set.add(id) : set.delete(id));
+  data.hidden = [...set]; syncHidden();
+  const st = $('foodsBody').scrollTop; renderFoods(); $('foodsBody').scrollTop = st;
+}
+$('foodsSearch').addEventListener('input', renderFoods);
+updateFoodsBtn();
+
 /* ---------- Настройки ---------- */
 const SET_FIELDS = ['sex','age','height','weight','act','goal','manual','pp','cp','fp','salt'];
 function readSettingsForm(){
@@ -2511,6 +2649,7 @@ function readSettingsForm(){
 }
 function openSettings(){
   SET_FIELDS.forEach(k=>{ $('st-'+k).value = data.settings[k]; });
+  updateFoodsBtn();
   updateCalc();
   openSheet('settings');
   $('settings').querySelector('.sheet-body').scrollTop = 0;
